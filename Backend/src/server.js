@@ -1,36 +1,57 @@
+// import express from "express";
+// import cors from "cors";
+// import dotenv from "dotenv";
+
+
+// dotenv.config();
+
+// const app = express();
+// const PORT = process.env.PORT || 6000;
+
+// // Connect to MongoDB
+// connectDB()
+//   .then(() => console.log("MongoDB connected"))
+//   .catch((err) => {
+//     console.error("MongoDB connection failed:", err.message);
+//     process.exit(1);
+//   });
+
+
+
+
+
+// // Default route
+// app.get("/", (req, res) => {
+//   res.send("API is running...");
+// });
+
+// // Start server
+// app.listen(PORT, () => {
+//   console.log(`Server started on PORT: ${PORT}`);
+// });
+
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-
-import flightRoutes from "./routes/flightRoutes.js";
-import passengerRoutes from "./routes/passengerRoutes.js"; 
-import reviewRoutes from "./routes/reviewRoutes.js";
 import { connectDB } from "./config/db.js";
-import rateLimiter from "./middleware/rateLimiter.js";
 
 dotenv.config();
 
-console.log(process.env.MONGO_URI);
+const app = express();
+const PORT = process.env.PORT || 6000;
 
-const app = express ();
-const PORT = process.env.PORT || 5001
+app.use(cors());
+app.use(express.json());
 
-// connectDB()
+connectDB();
 
-
-app.use(express.json ()); //this middleware will pars JSON bodies: req.body
-app.use(rateLimiter);
-app.use(cors({
-  origin: "http://localhost:5173"
-}));
-
-app.use("/api/flight", flightRoutes);
-app.use("/api/passenger", passengerRoutes); 
-app.use("/api/review", reviewRoutes);
-
-connectDB().then(() => {
-app.listen(5001, () => {
-  console.log("Server started on PORT:", PORT);
-});
+// Default route
+app.get("/", (req, res) => {
+  res.send("API is running...");
 });
 
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server started on PORT: ${PORT}`);
+});

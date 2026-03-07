@@ -1,21 +1,20 @@
-import ratelimit from "../config/upstash.js"
+import ratelimit from "../config/upstash.js";
 
-const rateLimiter = async (req,res,next) => {
+const rateLimiter = async (req, res, next) => {
+  if (process.env.DISABLE_RATE_LIMIT === "true") return next();
 
-  try{
-    const {success} = await ratelimit.limit("my-rate-limit")
+  try {
+    const key = `rl:${req.ip}:${req.originalUrl}`;
+    const { success } = await ratelimit.limit(key);
 
-    if(!success) {
-      return res.status(429).json({
-        message : "Too many requests, please try again later"
-      })
+    if (!success) {
+      return res.status(429).json({ message: "Too many requests" });
     }
-
-    next()
-  } catch (error) {
-    console.log("Rate limit error", error)
-    next(error);
+    return next();
+  } catch (err) {
+    // optional: fail-open so it won't break your app
+    return next();
   }
-}
+};
 
-export default rateLimiter
+export default rateLimiter;
