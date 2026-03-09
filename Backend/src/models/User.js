@@ -45,7 +45,27 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // GridFS file reference
+    requestedCollaborations: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    sentCollaborations: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    collaborators: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
     profilePictureId: {
       type: mongoose.Schema.Types.ObjectId,
       default: null,

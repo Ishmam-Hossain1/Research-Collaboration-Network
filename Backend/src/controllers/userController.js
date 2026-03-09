@@ -10,21 +10,24 @@ export const createUser = async (req, res) => {
       username,
       email,
       password,
-      researchInterests
+      researchInterests,
     });
 
     res.status(201).json(user);
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
 // GET ALL RESEARCHERS WITH SEARCH + FILTER
 export const getResearchers = async (req, res) => {
   try {
-    const { search = "", researchInterest = "", skill = "", excludeUserId = "" } = req.query;
+    const {
+      search = "",
+      researchInterest = "",
+      skill = "",
+      excludeUserId = "",
+    } = req.query;
 
     const query = {};
 
@@ -51,9 +54,7 @@ export const getResearchers = async (req, res) => {
       };
     }
 
-    const users = await User.find(query)
-      .select("-password")
-      .sort({ createdAt: -1 });
+    const users = await User.find(query).select("-password").sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "Researchers fetched successfully",
@@ -70,7 +71,9 @@ export const getUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findById(id).select("-password");
+    const user = await User.findById(id)
+      .select("-password")
+      .populate("collaborators", "-password");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -101,7 +104,6 @@ export const updateUserProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // optional uniqueness checks if username/email are changed
     if (username && username !== user.username) {
       const existingUsername = await User.findOne({ username });
       if (existingUsername) {
@@ -175,10 +177,7 @@ export const uploadProfilePicture = async (req, res) => {
 
     const readStream = fs.createReadStream(req.file.path);
     await new Promise((resolve, reject) => {
-      readStream
-        .pipe(uploadStream)
-        .on("error", reject)
-        .on("finish", resolve);
+      readStream.pipe(uploadStream).on("error", reject).on("finish", resolve);
     });
 
     if (fs.existsSync(req.file.path)) {
@@ -200,6 +199,202 @@ export const uploadProfilePicture = async (req, res) => {
         relationshipStatus: updatedUser.relationshipStatus,
         researchInterests: updatedUser.researchInterests,
       },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// SEND COLLABORATION REQUEST
+export const sendCollaborationRequest = async (req, res) => {
+  try {
+    const { fromUserId, toUserId } = req.body;
+
+    if (!fromUserId || !toUserId) {
+      return res.status(400).json({ message: "Both user IDs are required" });
+    }
+
+    if (fromUserId === toUserId) {
+      return res
+        .status(400)
+        .json({ message: "You cannot send a collaboration request to yourself" });
+    }
+
+    const fromUser = await User.findById(fromUserId);
+    const toUser = await User.findById(toUserId);
+
+    if (!fromUser || !toUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const alreadySent = toUser.requestedCollaborations.some(
+      (userId) => userId.toString() === fromUserId
+    );
+
+    if (alreadySent) {
+      return res.status(400).json({ message: "Collaboration request already sent" });
+    }
+
+    toUser.requestedCollaborations.push(fromUserId);
+    fromUser.sentCollaborations.push(toUserId);
+
+    await toUser.save();
+    await fromUser.save();
+
+    res.status(200).json({
+      message: "Collaboration request sent successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET INCOMING COLLABORATION REQUESTS
+export const getCollaborationRequests = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .populate("requestedCollaborations", "-password")
+      .select("requestedCollaborations");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Collaboration requests fetched successfully",
+      count: user.requestedCollaborations.length,
+      requests: user.requestedCollaborations,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET SENT COLLABORATION REQUESTS
+export const getSentCollaborationRequests = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .populate("sentCollaborations", "-password")
+      .select("sentCollaborations");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Sent collaboration requests fetched successfully",
+      count: user.sentCollaborations.length,
+      requests: user.sentCollaborations,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ACCEPT COLLABORATION REQUEST
+export const acceptCollaborationRequest = async (req, res) => {
+  try {
+    const { currentUserId, requesterUserId } = req.body;
+
+    if (!currentUserId || !requesterUserId) {
+      return res.status(400).json({ message: "Both user IDs are required" });
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    const requesterUser = await User.findById(requesterUserId);
+
+    if (!currentUser || !requesterUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hasRequest = currentUser.requestedCollaborations.some(
+      (id) => id.toString() === requesterUserId
+    );
+
+    if (!hasRequest) {
+      return res.status(400).json({ message: "Collaboration request not found" });
+    }
+
+    currentUser.requestedCollaborations =
+      currentUser.requestedCollaborations.filter(
+        (id) => id.toString() !== requesterUserId
+      );
+
+    requesterUser.sentCollaborations =
+      requesterUser.sentCollaborations.filter(
+        (id) => id.toString() !== currentUserId
+      );
+
+    const alreadyCollaboratorsForCurrentUser = currentUser.collaborators.some(
+      (id) => id.toString() === requesterUserId
+    );
+
+    if (!alreadyCollaboratorsForCurrentUser) {
+      currentUser.collaborators.push(requesterUserId);
+    }
+
+    const alreadyCollaboratorsForRequester = requesterUser.collaborators.some(
+      (id) => id.toString() === currentUserId
+    );
+
+    if (!alreadyCollaboratorsForRequester) {
+      requesterUser.collaborators.push(currentUserId);
+    }
+
+    await currentUser.save();
+    await requesterUser.save();
+
+    res.status(200).json({
+      message: "Collaboration request accepted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// REJECT COLLABORATION REQUEST
+export const rejectCollaborationRequest = async (req, res) => {
+  try {
+    const { currentUserId, requesterUserId } = req.body;
+
+    if (!currentUserId || !requesterUserId) {
+      return res.status(400).json({ message: "Both user IDs are required" });
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    const requesterUser = await User.findById(requesterUserId);
+
+    if (!currentUser || !requesterUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const hasRequest = currentUser.requestedCollaborations.some(
+      (id) => id.toString() === requesterUserId
+    );
+
+    if (!hasRequest) {
+      return res.status(400).json({ message: "Collaboration request not found" });
+    }
+
+    currentUser.requestedCollaborations =
+      currentUser.requestedCollaborations.filter(
+        (id) => id.toString() !== requesterUserId
+      );
+
+    requesterUser.sentCollaborations =
+      requesterUser.sentCollaborations.filter(
+        (id) => id.toString() !== currentUserId
+      );
+
+    await currentUser.save();
+    await requesterUser.save();
+
+    res.status(200).json({
+      message: "Collaboration request rejected successfully",
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
