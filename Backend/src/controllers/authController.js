@@ -148,11 +148,18 @@
 //   }
 // };
 
+import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import { getGridFSBucket } from "../config/gridfs.js";
+
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+};
 
 // SIGNUP
 export const signupUser = async (req, res) => {
@@ -205,14 +212,16 @@ export const signupUser = async (req, res) => {
       email,
       password: hashedPassword,
       profilePictureId,
-      // these stay empty by default for now
       aboutMe: "",
       skills: [],
       relationshipStatus: "",
     });
 
+    const token = generateToken(newUser._id);
+
     res.status(201).json({
       message: "User created successfully",
+      token,
       user: {
         id: newUser._id,
         username: newUser.username,
@@ -254,8 +263,11 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
+    const token = generateToken(user._id);
+
     res.status(200).json({
       message: "Login successful",
+      token,
       user: {
         id: user._id,
         username: user.username,
