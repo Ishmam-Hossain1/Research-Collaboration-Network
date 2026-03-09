@@ -6,6 +6,7 @@ import { connectDB } from "./config/db.js";
 import { initGridFS } from "./config/gridfs.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import projectRoutes from "./routes/projectRoutes.js";
 import datasetRoutes from "./routes/datasetRoutes.js";
 import fundingRoutes from "./routes/fundingRoutes.js";
 
@@ -20,6 +21,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/projects", projectRoutes);
 app.use("/api/datasets", datasetRoutes);
 app.use("/api/funding", fundingRoutes);
 
