@@ -21,6 +21,50 @@ export const createUser = async (req, res) => {
 };
 
 
+// GET ALL RESEARCHERS WITH SEARCH + FILTER
+export const getResearchers = async (req, res) => {
+  try {
+    const { search = "", researchInterest = "", skill = "", excludeUserId = "" } = req.query;
+
+    const query = {};
+
+    if (excludeUserId) {
+      query._id = { $ne: excludeUserId };
+    }
+
+    if (search.trim()) {
+      query.$or = [
+        { username: { $regex: search.trim(), $options: "i" } },
+        { email: { $regex: search.trim(), $options: "i" } },
+      ];
+    }
+
+    if (researchInterest.trim()) {
+      query.researchInterests = {
+        $elemMatch: { $regex: researchInterest.trim(), $options: "i" },
+      };
+    }
+
+    if (skill.trim()) {
+      query.skills = {
+        $elemMatch: { $regex: skill.trim(), $options: "i" },
+      };
+    }
+
+    const users = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "Researchers fetched successfully",
+      count: users.length,
+      researchers: users,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // GET USER PROFILE
 export const getUserProfile = async (req, res) => {
   try {
