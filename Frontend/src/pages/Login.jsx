@@ -33,8 +33,11 @@ const Login = () => {
         "researchConnectUser",
         JSON.stringify(res.data.user)
       );
-      localStorage.setItem("researchConnectToken", res.data.token);
+      // localStorage.setItem("researchConnectToken", res.data.token);
 
+      // localStorage.setItem("researchConnectToken", res.data.token);
+
+      localStorage.setItem("researchConnectUser", JSON.stringify(res.data.user));
       localStorage.setItem("researchConnectToken", res.data.token);
 
       console.log("LOGIN SUCCESS:", res.data);
