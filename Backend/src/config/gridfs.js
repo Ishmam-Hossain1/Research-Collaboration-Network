@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { GridFSBucket } from "mongodb";
 
 let gfsBucket;
+let datasetsBucket;
 
 export const initGridFS = () => {
   const db = mongoose.connection.db;
@@ -14,13 +15,23 @@ export const initGridFS = () => {
     bucketName: "profilePictures",
   });
 
-  console.log("GridFS initialized");
+  datasetsBucket = new GridFSBucket(db, {
+    bucketName: "datasets",
+  });
+
+  console.log("GridFS initialized (profilePictures + datasets)");
 };
 
 export const getGridFSBucket = () => {
   if (!gfsBucket) {
     throw new Error("GridFSBucket is not initialized");
   }
-
   return gfsBucket;
+};
+
+export const getDatasetsBucket = () => {
+  if (!datasetsBucket) {
+    throw new Error("Datasets GridFSBucket is not initialized");
+  }
+  return datasetsBucket;
 };

@@ -151,6 +151,7 @@
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { getGridFSBucket } from "../config/gridfs.js";
 
@@ -211,8 +212,15 @@ export const signupUser = async (req, res) => {
       relationshipStatus: "",
     });
 
+    const token = jwt.sign(
+      { id: newUser._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.status(201).json({
       message: "User created successfully",
+      token,
       user: {
         id: newUser._id,
         username: newUser.username,
@@ -254,8 +262,15 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.status(200).json({
       message: "Login successful",
+      token,
       user: {
         id: user._id,
         username: user.username,

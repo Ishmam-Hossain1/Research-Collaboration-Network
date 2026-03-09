@@ -25,6 +25,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Homepage";
 import UserProfile from "./pages/UserProfile";
+import DatasetList from "./pages/DatasetList";
+import UploadDataset from "./pages/UploadDataset";
 import Researchers from "./pages/Researchers";
 import ResearcherProfile from "./pages/ResearcherProfile";
 import CollaborationRequests from "./pages/CollaborationRequests";
@@ -40,6 +42,8 @@ function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/home" element={<Home />} />
       <Route path="/profile" element={<UserProfile />} />
+      <Route path="/datasets" element={<DatasetList />} />
+      <Route path="/upload-dataset" element={<UploadDataset />} />
       <Route path="/researchers" element={<Researchers />} />
       <Route path="/researchers/:id" element={<ResearcherProfile />} />
       <Route
