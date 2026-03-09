@@ -4,6 +4,9 @@ import Signup from "./pages/Signup";
 import Home from "./pages/Homepage";
 import UserProfile from "./pages/UserProfile";
 import Researchers from "./pages/Researchers";
+import Funding from "./pages/Funding";
+import CreateFunding from "./pages/CreateFunding";
+import EditFunding from "./pages/EditFunding";
 
 function App() {
   return (
@@ -14,6 +17,9 @@ function App() {
       <Route path="/home" element={<Home />} />
       <Route path="/profile" element={<UserProfile />} />
       <Route path="/researchers" element={<Researchers />} />
+      <Route path="/funding" element={<Funding />} />
+      <Route path="/funding/new" element={<CreateFunding />} />
+      <Route path="/funding/edit/:id" element={<EditFunding />} />
     </Routes>
   );
 }
