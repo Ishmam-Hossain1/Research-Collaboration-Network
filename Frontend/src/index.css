@@ -278,3 +278,42 @@ body {
   justify-content: center;
   font-weight: 600;
 }
+
+.researcher-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.researcher-card-link:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.researcher-card {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.researcher-card:hover {
+  transform: translateY(-4px);
+  border-color: #cbd5e1;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.10);
+}
+
+.profile-action-btn {
+  margin-top: 12px;
+  border-radius: 10px;
+  background: #0284c7;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.profile-action-btn:hover {
+  background: #0369a1;
+}
