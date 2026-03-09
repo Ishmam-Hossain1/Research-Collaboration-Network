@@ -28,6 +28,9 @@ import UserProfile from "./pages/UserProfile";
 import Researchers from "./pages/Researchers";
 import ResearcherProfile from "./pages/ResearcherProfile";
 import CollaborationRequests from "./pages/CollaborationRequests";
+import Funding from "./pages/Funding";
+import CreateFunding from "./pages/CreateFunding";
+import EditFunding from "./pages/EditFunding";
 
 function App() {
   return (
@@ -43,6 +46,9 @@ function App() {
         path="/collaboration-requests"
         element={<CollaborationRequests />}
       />
+      <Route path="/funding" element={<Funding />} />
+      <Route path="/funding/new" element={<CreateFunding />} />
+      <Route path="/funding/edit/:id" element={<EditFunding />} />
     </Routes>
   );
 }
