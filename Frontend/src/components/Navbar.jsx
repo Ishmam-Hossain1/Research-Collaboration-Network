@@ -45,7 +45,7 @@ const Navbar = () => {
         <a href="#">Collaborate</a>
         <a href="#">Project</a>
         <a href="#">Funding</a>
-        <a href="#">Datasets</a>
+        <Link to="/datasets">Datasets</Link>
         <a href="#">Conference</a>
         <a href="#">Equipment</a>
       </nav>
