@@ -6,9 +6,23 @@
 //   const navigate = useNavigate();
 //   const [fundingList, setFundingList] = useState([]);
 //   const [loading, setLoading] = useState(true);
+
 //   const [showDeleteModal, setShowDeleteModal] = useState(false);
 //   const [selectedFundingId, setSelectedFundingId] = useState(null);
 //   const [deleteLoading, setDeleteLoading] = useState(false);
+
+//   const [showDeleteSuccessPopup, setShowDeleteSuccessPopup] = useState(false);
+
+//   const savedUser = JSON.parse(localStorage.getItem("researchConnectUser"));
+
+//   const currentUserId =
+//     savedUser?._id ||
+//     savedUser?.id ||
+//     savedUser?.user?._id ||
+//     savedUser?.user?.id;
+
+//   const currentUser = JSON.parse(localStorage.getItem("researchConnectUser"));
+// //   const currentUserId = currentUser?._id || currentUser?.id;
 
 //   const fetchFundingOpportunities = async () => {
 //     try {
@@ -37,7 +51,6 @@
 //   };
 
 //   const closeDeleteModal = () => {
-//     if (deleteLoading) return;
 //     setShowDeleteModal(false);
 //     setSelectedFundingId(null);
 //   };
@@ -61,7 +74,14 @@
 //         setFundingList((prev) =>
 //           prev.filter((item) => item._id !== selectedFundingId)
 //         );
-//         closeDeleteModal();
+
+//         setShowDeleteModal(false);
+//         setSelectedFundingId(null);
+//         setShowDeleteSuccessPopup(true);
+
+//         setTimeout(() => {
+//           setShowDeleteSuccessPopup(false);
+//         }, 2000);
 //       } else {
 //         alert(data.message || "Failed to delete funding opportunity");
 //       }
@@ -77,7 +97,11 @@
 //     <>
 //       <Navbar />
 
-//       <div className={`p-10 ${showDeleteModal ? "blur-sm" : ""}`}>
+//       <div
+//         className={`p-10 ${
+//           showDeleteModal || showDeleteSuccessPopup ? "blur-sm" : ""
+//         }`}
+//       >
 //         <div className="flex justify-between items-center mb-10">
 //           <div>
 //             <h1 className="text-3xl font-bold">Research Funding Opportunities</h1>
@@ -184,6 +208,16 @@
 //           </div>
 //         </div>
 //       )}
+
+//       {showDeleteSuccessPopup && (
+//         <div className="fixed inset-0 flex items-center justify-center z-50">
+//           <div className="bg-white p-8 rounded shadow-lg text-center">
+//             <h2 className="text-xl font-bold text-red-600">
+//               Funding Deleted Successfully
+//             </h2>
+//           </div>
+//         </div>
+//       )}
 //     </>
 //   );
 // };
@@ -202,8 +236,15 @@ const Funding = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFundingId, setSelectedFundingId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
   const [showDeleteSuccessPopup, setShowDeleteSuccessPopup] = useState(false);
+
+  const savedUser = JSON.parse(localStorage.getItem("researchConnectUser"));
+
+  const currentUserId =
+    savedUser?._id ||
+    savedUser?.id ||
+    savedUser?.user?._id ||
+    savedUser?.user?.id;
 
   const fetchFundingOpportunities = async () => {
     try {
@@ -307,53 +348,77 @@ const Funding = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {fundingList.map((item) => (
-              <div
-                key={item._id}
-                className="bg-white rounded-xl shadow p-6 border border-gray-200"
-              >
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <h2 className="text-2xl font-semibold text-gray-800">
-                      {item.grantTitle}
-                    </h2>
-                    <p className="text-gray-600 mt-2">
-                      {item.eligibilityCriteria}
+            {fundingList.map((item) => {
+              const ownerId =
+                typeof item.postedBy === "object"
+                  ? item.postedBy?._id
+                  : item.postedBy;
+
+              const isOwner =
+                ownerId &&
+                currentUserId &&
+                String(ownerId) === String(currentUserId);
+
+              const postedByName =
+                typeof item.postedBy === "object"
+                  ? item.postedBy?.username || item.postedBy?.email || "Unknown"
+                  : "Unknown";
+
+              return (
+                <div
+                  key={item._id}
+                  className="bg-white rounded-xl shadow p-6 border border-gray-200"
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <div>
+                      <h2 className="text-2xl font-semibold text-gray-800">
+                        {item.grantTitle}
+                      </h2>
+                      <p className="text-gray-600 mt-2">
+                        {item.eligibilityCriteria}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Funding Amount</p>
+                      <p className="text-lg font-bold text-green-600">
+                        ${item.fundingAmount}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-500">Deadline</p>
+                    <p className="font-medium text-gray-800">
+                      {new Date(item.deadline).toLocaleDateString()}
                     </p>
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Funding Amount</p>
-                    <p className="text-lg font-bold text-green-600">
-                      ${item.fundingAmount}
-                    </p>
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-500">Posted by</p>
+                    <p className="font-medium text-gray-800">{postedByName}</p>
                   </div>
-                </div>
 
-                <div className="mt-4">
-                  <p className="text-sm text-gray-500">Deadline</p>
-                  <p className="font-medium text-gray-800">
-                    {new Date(item.deadline).toLocaleDateString()}
-                  </p>
-                </div>
+                  {isOwner && (
+                    <div className="mt-5 flex gap-3">
+                      <button
+                        onClick={() => navigate(`/funding/edit/${item._id}`)}
+                        className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
+                      >
+                        Edit
+                      </button>
 
-                <div className="mt-5 flex gap-3">
-                  <button
-                    onClick={() => navigate(`/funding/edit/${item._id}`)}
-                    className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    onClick={() => openDeleteModal(item._id)}
-                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
+                      <button
+                        onClick={() => openDeleteModal(item._id)}
+                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

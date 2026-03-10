@@ -2,9 +2,10 @@ import FundingOpportunity from "../models/FundingOpportunity.js";
 
 export const createFundingOpportunity = async (req, res) => {
   try {
-    const { grantTitle, fundingAmount, deadline, eligibilityCriteria } = req.body;
+    // console.log("req.body:", req.body);
+    const { grantTitle, fundingAmount, deadline, eligibilityCriteria, postedBy } = req.body;
 
-    if (!grantTitle || !fundingAmount || !deadline || !eligibilityCriteria) {
+    if (!grantTitle || !fundingAmount || !deadline || !eligibilityCriteria || !postedBy) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -15,6 +16,7 @@ export const createFundingOpportunity = async (req, res) => {
       fundingAmount,
       deadline,
       eligibilityCriteria,
+      postedBy,
     });
 
     res.status(201).json({
@@ -29,11 +31,28 @@ export const createFundingOpportunity = async (req, res) => {
   }
 };
 
+// export const getAllFundingOpportunities = async (req, res) => {
+//   try {
+//     const fundingOpportunities = await FundingOpportunity.find().sort({
+//       createdAt: -1,
+//     });
+
+//     res.status(200).json(fundingOpportunities);
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Error fetching funding opportunities",
+//       error: error.message,
+//     });
+//   }
+// };
+
 export const getAllFundingOpportunities = async (req, res) => {
   try {
-    const fundingOpportunities = await FundingOpportunity.find().sort({
-      createdAt: -1,
-    });
+    const fundingOpportunities = await FundingOpportunity.find()
+      .populate("postedBy", "username email")
+      .sort({
+        createdAt: -1,
+      });
 
     res.status(200).json(fundingOpportunities);
   } catch (error) {
@@ -44,9 +63,27 @@ export const getAllFundingOpportunities = async (req, res) => {
   }
 };
 
+// export const getFundingOpportunityById = async (req, res) => {
+//   try {
+//     const fundingOpportunity = await FundingOpportunity.findById(req.params.id);
+
+//     if (!fundingOpportunity) {
+//       return res.status(404).json({ message: "Funding opportunity not found" });
+//     }
+
+//     res.status(200).json(fundingOpportunity);
+//   } catch (error) {
+//     res.status(500).json({
+//       message: "Error fetching funding opportunity",
+//       error: error.message,
+//     });
+//   }
+// };
+
 export const getFundingOpportunityById = async (req, res) => {
   try {
-    const fundingOpportunity = await FundingOpportunity.findById(req.params.id);
+    const fundingOpportunity = await FundingOpportunity.findById(req.params.id)
+      .populate("postedBy", "username email");
 
     if (!fundingOpportunity) {
       return res.status(404).json({ message: "Funding opportunity not found" });

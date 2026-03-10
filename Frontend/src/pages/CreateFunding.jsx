@@ -4,6 +4,15 @@ import Navbar from "../components/Navbar";
 
 const CreateFunding = () => {
   const navigate = useNavigate();
+//   const currentUser = JSON.parse(localStorage.getItem("researchConnectUser"));
+
+  const savedUser = JSON.parse(localStorage.getItem("researchConnectUser"));
+
+    const currentUserId =
+      savedUser?._id ||
+      savedUser?.id ||
+      savedUser?.user?._id ||
+      savedUser?.user?.id;
 
   const [formData, setFormData] = useState({
     grantTitle: "",
@@ -21,61 +30,77 @@ const CreateFunding = () => {
     });
   };
 
-//   const handleSubmit = async (e) => {
+// const handleSubmit = async (e) => {
 //     e.preventDefault();
 
 //     try {
-//       await fetch("http://localhost:5000/api/funding", {
+//       const response = await fetch("http://localhost:5000/api/funding", {
 //         method: "POST",
 //         headers: {
-//           "Content-Type": "application/json",
+//             "Content-Type": "application/json",
 //         },
-//         body: JSON.stringify(formData),
-//       });
+//         body: JSON.stringify({
+//             ...formData,
+//             fundingAmount: Number(formData.fundingAmount),
+//             postedBy: currentUser?._id || currentUser?.id,
+//         }),
+//     });
 
-//       setShowPopup(true);
+//     const data = await response.json();
 
-//       setTimeout(() => {
+//         if (!response.ok) {
+//         throw new Error(data.message || "Failed to create funding");
+//         }
+
+//         setShowPopup(true);
+
+//         setTimeout(() => {
 //         navigate("/funding");
-//       }, 3000);
+//         }, 3000);
 
-//     } catch (error) {
-//       console.error(error);
-//     }
-//   };
+//         } catch (error) {
+//             console.error("Create funding error:", error);
+//             alert(error.message || "Something went wrong");
+//         }
+//     };
 
 const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      const response = await fetch("http://localhost:5000/api/funding", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            ...formData,
-            fundingAmount: Number(formData.fundingAmount),
-        }),
+  if (!currentUserId) {
+    alert("User not found. Please log in again.");
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:5000/api/funding", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...formData,
+        fundingAmount: Number(formData.fundingAmount),
+        postedBy: currentUserId,
+      }),
     });
 
     const data = await response.json();
 
-        if (!response.ok) {
-        throw new Error(data.message || "Failed to create funding");
-        }
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to create funding");
+    }
 
-        setShowPopup(true);
+    setShowPopup(true);
 
-        setTimeout(() => {
-        navigate("/funding");
-        }, 3000);
-
-        } catch (error) {
-            console.error("Create funding error:", error);
-            alert(error.message || "Something went wrong");
-        }
-    };
+    setTimeout(() => {
+      navigate("/funding");
+    }, 3000);
+  } catch (error) {
+    console.error("Create funding error:", error);
+    alert(error.message || "Something went wrong");
+  }
+};
 
   return (
     <>
@@ -164,5 +189,6 @@ const handleSubmit = async (e) => {
     </>
   );
 };
+
 
 export default CreateFunding;
