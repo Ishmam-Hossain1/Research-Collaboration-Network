@@ -16,7 +16,7 @@ body {
 
 /* NAVBAR */
 
-.navbar {
+/* .navbar {
   height: 72px;
   background: #ffffff;
   display: flex;
@@ -57,9 +57,132 @@ body {
   align-items: center;
   gap: 18px;
   cursor: pointer;
+} */
+
+
+.navbar {
+  height: 78px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 45%, #cbd5e1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 56px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+
+  box-shadow:
+    0 6px 18px rgba(15, 23, 42, 0.08),
+    0 18px 40px rgba(15, 23, 42, 0.12);
+
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
+.logo {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #0f172a;
+  text-transform: uppercase;
+}
 
+/* clean nav links (no boxes) */
+.nav-links {
+  display: flex;
+  gap: 32px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  position: relative;
+  transition: color 0.25s ease;
+}
+
+/* blue hover like before */
+.nav-links a:hover {
+  color: #2563eb;
+}
+
+/* subtle underline animation */
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 0%;
+  height: 2px;
+  background: #2563eb;
+  transition: width 0.25s ease;
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+
+/* icons */
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #334155;
+}
+
+.nav-icons svg {
+  padding: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.nav-icons svg:hover {
+  color: #2563eb;
+  background: white;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+}
+
+/* profile avatar */
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-left: 8px;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-avatar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.16);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
 /* HOMEPAGE */
 
 .homepage {
