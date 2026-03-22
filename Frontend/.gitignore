@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 *.local
+<<<<<<< HEAD
+=======
+.env
+.env.local
+>>>>>>> e724797 (feedback on project)
 
 # Editor directories and files
 .vscode/*
