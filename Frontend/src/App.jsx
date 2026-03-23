@@ -1,10 +1,30 @@
-// import { Routes, Route, Navigate } from "react-router-dom";
-<<<<<<< HEAD
 
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Home from "./pages/Homepage";
+import UserProfile from "./pages/UserProfile";
+import Dashboard from "./pages/Dashboard";
+import AllProjects from "./pages/AllProjects";
+import DatasetList from "./pages/DatasetList";
+import UploadDataset from "./pages/UploadDataset";
+import Researchers from "./pages/Researchers";
+import ResearcherProfile from "./pages/ResearcherProfile";
+import CollaborationRequests from "./pages/CollaborationRequests";
+import Funding from "./pages/Funding";
+import CreateFunding from "./pages/CreateFunding";
+import EditFunding from "./pages/EditFunding";
+
+import {
+  ChatSidebarProvider,
+  useChatSidebar,
+} from "./context/ChatSidebarContext";
+import { Sidebar, SidebarBody } from "./components/ui/sidebar";
+import ChatSidebarContent from "./components/ChatSidebarContent";
+import ChatWindow from "./components/ChatWindow";
 
 // export default App;
-=======
 // import Login from "./pages/Login";
 // import Signup from "./pages/Signup";
 // import Home from "./pages/Homepage";
@@ -44,6 +64,7 @@ import EditFunding from "./pages/EditFunding";
 import ProjectDetails from "./pages/ProjectDetails";
 
 function App() {
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" />} />
@@ -69,5 +90,46 @@ function App() {
   );
 }
 
+
+function GlobalChatSidebar() {
+  const { isChatSidebarOpen, setIsChatSidebarOpen } = useChatSidebar();
+
+  return (
+    <div className="pointer-events-none fixed right-0 top-[78px] z-20 h-[calc(100vh-78px)]">
+      <div className="pointer-events-auto h-full">
+        <Sidebar
+          open={isChatSidebarOpen}
+          setOpen={setIsChatSidebarOpen}
+          animate={true}
+        >
+          <SidebarBody className="h-full">
+            <ChatSidebarContent />
+          </SidebarBody>
+        </Sidebar>
+      </div>
+    </div>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const hideChat = location.pathname === "/login" || location.pathname === "/signup";
+
+  return (
+    <>
+      {!hideChat && <GlobalChatSidebar />}
+      {!hideChat && <ChatWindow />}
+      <AppRoutes />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <ChatSidebarProvider>
+      <AppContent />
+    </ChatSidebarProvider>
+  );
+}
+
 export default App;
->>>>>>> e724797 (feedback on project)

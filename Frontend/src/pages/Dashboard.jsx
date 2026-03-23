@@ -379,10 +379,13 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
     project.status === "completed"
       ? "bg-emerald-600"
       : project.progress >= 75
+
         ? "bg-blue-600"
         : project.progress >= 40
           ? "bg-amber-500"
           : "bg-slate-500";
+
+
 
   return (
     <div className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -392,10 +395,12 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
         </span>
 
         <span
+
           className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${project.status === "completed"
               ? "bg-emerald-100 text-emerald-700"
               : "bg-amber-100 text-amber-700"
             }`}
+
         >
           {project.status}
         </span>
@@ -475,6 +480,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
         )}
       </div>
 
+
       <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
         <button
           onClick={() => window.location.href = `/projects/${project._id}`}
@@ -501,6 +507,7 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
             Delete
           </button>
         </div>
+
       </div>
     </div>
   );

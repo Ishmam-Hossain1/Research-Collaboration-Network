@@ -247,6 +247,7 @@ const AllProjects = () => {
                   project={project}
                   onFeedbackClick={setFeedbackProject}
                 />
+                
               ))}
             </div>
           )}
@@ -264,7 +265,9 @@ const AllProjects = () => {
   );
 };
 
+
 const PublicProjectCard = ({ project, onFeedbackClick }) => {
+
   const formattedStartDate = project.startDate
     ? new Date(project.startDate).toLocaleDateString()
     : null;
@@ -277,10 +280,11 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
     project.status === "completed"
       ? "bg-emerald-600"
       : project.progress >= 75
+
         ? "bg-blue-600"
         : project.progress >= 40
           ? "bg-amber-500"
-          : "bg-slate-500";
+
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -294,12 +298,15 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
               ? "bg-emerald-100 text-emerald-700"
               : "bg-amber-100 text-amber-700"
             }`}
-        >
+        
           {project.status}
         </span>
       </div>
 
+
       <h3 className="line-clamp-2 text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+
+
         {project.title}
       </h3>
 
@@ -374,6 +381,7 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
         )}
       </div>
 
+
       <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 gap-2">
         <button
           onClick={() => onFeedbackClick(project)}
@@ -390,7 +398,8 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
           View Details
         </button>
       </div>
-    </div>
+
+    
   );
 };
 
