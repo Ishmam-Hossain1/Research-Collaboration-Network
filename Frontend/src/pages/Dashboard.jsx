@@ -14,6 +14,7 @@ import {
   Trash2,
   Sparkles,
   ArrowUpDown,
+  ExternalLink,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import api from "../lib/api";
@@ -378,10 +379,13 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
     project.status === "completed"
       ? "bg-emerald-600"
       : project.progress >= 75
-      ? "bg-blue-600"
-      : project.progress >= 40
-      ? "bg-amber-500"
-      : "bg-slate-500";
+
+        ? "bg-blue-600"
+        : project.progress >= 40
+          ? "bg-amber-500"
+          : "bg-slate-500";
+
+
 
   return (
     <div className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -391,11 +395,12 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
         </span>
 
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-            project.status === "completed"
+
+          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${project.status === "completed"
               ? "bg-emerald-100 text-emerald-700"
               : "bg-amber-100 text-amber-700"
-          }`}
+            }`}
+
         >
           {project.status}
         </span>
@@ -475,22 +480,34 @@ const ProjectCard = ({ project, onEdit, onDelete }) => {
         )}
       </div>
 
-      <div className="mt-6 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+
+      <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
         <button
-          onClick={() => onEdit(project)}
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-600"
+          onClick={() => window.location.href = `/projects/${project._id}`}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
         >
-          <Pencil size={16} />
-          Edit
+          <ExternalLink size={16} />
+          Details
         </button>
 
-        <button
-          onClick={() => onDelete(project._id)}
-          className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
-        >
-          <Trash2 size={16} />
-          Delete
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onEdit(project)}
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-600"
+          >
+            <Pencil size={16} />
+            Edit
+          </button>
+
+          <button
+            onClick={() => onDelete(project._id)}
+            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+          >
+            <Trash2 size={16} />
+            Delete
+          </button>
+        </div>
+
       </div>
     </div>
   );

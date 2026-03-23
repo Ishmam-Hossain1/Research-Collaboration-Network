@@ -1,9 +1,9 @@
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
-
 import { connectDB } from "./config/db.js";
 import { initGridFS } from "./config/gridfs.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -11,6 +11,10 @@ import userRoutes from "./routes/userRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import datasetRoutes from "./routes/datasetRoutes.js";
 import fundingRoutes from "./routes/fundingRoutes.js";
+
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+
+
 import chatRoutes from "./routes/chatRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 
@@ -30,6 +34,9 @@ export const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+
+// Connect to database
+connectDB();
 
 // Track online users
 const onlineUsers = new Map(); // userId -> Set of socketIds
@@ -75,29 +82,35 @@ io.on("connection", (socket) => {
     emitOnlineUsers();
   });
 });
-
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/datasets", datasetRoutes);
 app.use("/api/funding", fundingRoutes);
+
+app.use("/api/feedback", feedbackRoutes);
+
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
+
 
 // Default route
 app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server started on PORT: ${PORT}`);
+});
 const startServer = async () => {
   try {
     await connectDB();
     console.log("MongoDB connected successfully");
-
     initGridFS();
-
     server.listen(PORT, () => {
+
       console.log(`Server started on PORT: ${PORT}`);
     });
   } catch (error) {
