@@ -247,14 +247,12 @@ const AllProjects = () => {
                   project={project}
                   onFeedbackClick={setFeedbackProject}
                 />
-                
               ))}
             </div>
           )}
         </section>
       </main>
 
-      {/* Feedback Modal */}
       {feedbackProject && (
         <FeedbackModal
           project={feedbackProject}
@@ -265,9 +263,7 @@ const AllProjects = () => {
   );
 };
 
-
 const PublicProjectCard = ({ project, onFeedbackClick }) => {
-
   const formattedStartDate = project.startDate
     ? new Date(project.startDate).toLocaleDateString()
     : null;
@@ -280,11 +276,10 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
     project.status === "completed"
       ? "bg-emerald-600"
       : project.progress >= 75
-
-        ? "bg-blue-600"
-        : project.progress >= 40
-          ? "bg-amber-500"
-
+      ? "bg-blue-600"
+      : project.progress >= 40
+      ? "bg-amber-500"
+      : "bg-rose-500";
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -294,19 +289,17 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
         </span>
 
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${project.status === "completed"
+          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+            project.status === "completed"
               ? "bg-emerald-100 text-emerald-700"
               : "bg-amber-100 text-amber-700"
-            }`}
-        
+          }`}
+        >
           {project.status}
         </span>
       </div>
 
-
-      <h3 className="line-clamp-2 text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-
-
+      <h3 className="line-clamp-2 text-xl font-bold text-slate-900 transition-colors group-hover:text-blue-600">
         {project.title}
       </h3>
 
@@ -316,7 +309,10 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
 
       {project.owner && (
         <p className="mt-3 text-sm text-slate-500">
-          By <span className="font-semibold text-slate-700">{project.owner.username}</span>
+          By{" "}
+          <span className="font-semibold text-slate-700">
+            {project.owner.username}
+          </span>
         </p>
       )}
 
@@ -381,25 +377,24 @@ const PublicProjectCard = ({ project, onFeedbackClick }) => {
         )}
       </div>
 
-
-      <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 gap-2">
+      <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
         <button
           onClick={() => onFeedbackClick(project)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 border border-violet-200 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 hover:border-violet-300"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
         >
-          <Star size={14} className="text-amber-500 fill-amber-400" />
+          <Star size={14} className="fill-amber-400 text-amber-500" />
           Give Feedback
         </button>
+
         <button
-          onClick={() => window.location.href = `/projects/${project._id}`}
+          onClick={() => (window.location.href = `/projects/${project._id}`)}
           className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
         >
           <ExternalLink size={16} />
           View Details
         </button>
       </div>
-
-    
+    </div>
   );
 };
 
