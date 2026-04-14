@@ -1,8 +1,7 @@
 
 @tailwind base;
 @tailwind components;
-
-
+@tailwind utilities;
 
 @layer base {
   :root {
@@ -46,7 +45,6 @@
     color: hsl(var(--foreground));
   }
 }
-
 /* GLOBAL RESET */
 
 body {
