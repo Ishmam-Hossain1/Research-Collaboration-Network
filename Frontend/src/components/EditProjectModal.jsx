@@ -44,9 +44,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
     abstract: "",
     researchField: "",
     status: "ongoing",
-
     progress: 0,
-
     objective: "",
     methodology: "",
     expectedOutcome: "",
@@ -74,7 +72,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
         abstract: project.abstract || "",
         researchField: project.researchField || "",
         status: project.status || "ongoing",
-
         progress: project.progress ?? 0,
         objective: project.objective || "",
         methodology: project.methodology || "",
@@ -96,14 +93,9 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({
       ...prev,
-
-      [name]: value,
-
       [name]: name === "progress" ? Number(value) : value,
-
     }));
   };
 
@@ -115,7 +107,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
       }));
       return;
     }
-
     setFormData((prev) => ({
       ...prev,
       researchField: field,
@@ -124,7 +115,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
 
   const handleCustomFieldApply = () => {
     if (!customField.trim()) return;
-
     setFormData((prev) => ({
       ...prev,
       researchField: customField.trim(),
@@ -160,24 +150,18 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
       alert("Project title is required");
       return;
     }
-
     if (!formData.abstract.trim()) {
       alert("Abstract is required");
       return;
     }
-
     if (!formData.researchField.trim()) {
       alert("Please select or enter a research field");
       return;
     }
-
-
     if (formData.progress < 0 || formData.progress > 100) {
       alert("Progress must be between 0 and 100");
       return;
     }
-
-
     if (
       formData.startDate &&
       formData.endDate &&
@@ -189,16 +173,12 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
 
     try {
       setLoading(true);
-
       const payload = {
         title: formData.title.trim(),
         abstract: formData.abstract.trim(),
         researchField: formData.researchField.trim(),
         status: formData.status,
-
-
         progress: Number(formData.progress),
-
         objective: formData.objective.trim(),
         methodology: formData.methodology.trim(),
         expectedOutcome: formData.expectedOutcome.trim(),
@@ -208,9 +188,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
         startDate: formData.startDate || null,
         endDate: formData.endDate || null,
       };
-
       const res = await api.put(`/projects/${project._id}`, payload);
-
       onProjectUpdated?.(res.data.project);
       onClose();
     } catch (error) {
@@ -269,7 +247,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                 the dashboard current.
               </p>
             </div>
-
             <button
               type="button"
               onClick={onClose}
@@ -290,7 +267,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     Core Information
                   </h3>
                 </div>
-
                 <div className="space-y-5">
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -305,7 +281,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                     />
                   </div>
-
                   <div>
                     <div className="mb-2 flex items-center justify-between">
                       <label className="block text-sm font-semibold text-slate-700">
@@ -324,7 +299,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       className="w-full resize-none rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                     />
                   </div>
-
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Objective
@@ -338,7 +312,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       className="w-full resize-none rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                     />
                   </div>
-
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Methodology
@@ -352,7 +325,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       className="w-full resize-none rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                     />
                   </div>
-
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
                       Expected Outcome
@@ -376,7 +348,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     Research Field
                   </h3>
                 </div>
-
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                   {RESEARCH_FIELDS.map((field) => {
                     const active =
@@ -384,7 +355,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       (field === "Other" &&
                         formData.researchField &&
                         !RESEARCH_FIELDS.includes(formData.researchField));
-
                     return (
                       <button
                         key={field}
@@ -401,7 +371,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     );
                   })}
                 </div>
-
                 <div className="mt-4 flex flex-col gap-3 md:flex-row">
                   <input
                     type="text"
@@ -429,12 +398,10 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     Status & Timeline
                   </h3>
                 </div>
-
                 <div className="space-y-5">
                   <div className="space-y-3">
                     {STATUS_OPTIONS.map((option) => {
                       const active = formData.status === option.value;
-
                       return (
                         <button
                           key={option.value}
@@ -449,7 +416,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                                   : prev.progress === 100
                                   ? 75
                                   : prev.progress,
-
                             }))
                           }
                           className={`w-full rounded-2xl border p-4 text-left transition ${
@@ -469,7 +435,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     })}
                   </div>
 
-
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                     <div className="font-semibold text-slate-900">
                       Progress is milestone-based
@@ -480,6 +445,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     <div className="mt-2 text-sm font-medium text-amber-700">
                       Current progress: {project.progress ?? 0}%
                     </div>
+                  </div>
 
                   <div>
                     <div className="mb-2 flex items-center justify-between">
@@ -490,7 +456,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                         {formData.progress}%
                       </span>
                     </div>
-
                     <input
                       type="range"
                       name="progress"
@@ -500,7 +465,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       onChange={handleChange}
                       className="h-2 w-full cursor-pointer rounded-lg bg-slate-200"
                     />
-
                     <input
                       type="number"
                       name="progress"
@@ -510,7 +474,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       onChange={handleChange}
                       className="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                     />
-
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -527,7 +490,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                         className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                       />
                     </div>
-
                     <div>
                       <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
                         <CalendarDays size={16} />
@@ -567,7 +529,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     Collaborators
                   </h3>
                 </div>
-
                 <div className="flex gap-3">
                   <input
                     type="text"
@@ -584,7 +545,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     Add
                   </button>
                 </div>
-
                 <TagList
                   items={collaborators}
                   onRemove={removeCollaborator}
@@ -599,7 +559,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     Keywords
                   </h3>
                 </div>
-
                 <div className="flex gap-3">
                   <input
                     type="text"
@@ -616,7 +575,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     Add
                   </button>
                 </div>
-
                 <TagList
                   items={keywords}
                   onRemove={removeKeyword}
@@ -635,17 +593,13 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       {formData.status}
                     </span>
                   </div>
-
                   <h4 className="text-base font-semibold text-slate-900">
                     {formData.title || "Your project title will appear here"}
                   </h4>
-
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {formData.abstract ||
-                      "A short project summary will appear here."}
+                    {formData.abstract || "A short project summary will appear here."}
                   </p>
-
-                  {keywords.length > 0 ? (
+                  {keywords.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {keywords.map((item) => (
                         <span
@@ -656,24 +610,21 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                         </span>
                       ))}
                     </div>
-                  ) : null}
-
-
+                  )}
                   <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600">
                     Progress is automatic and currently {project.progress ?? 0}% based on milestone completion.
-
-                  <div className="mt-4">
-                    <div className="mb-1 flex items-center justify-between text-sm text-slate-500">
-                      <span>Progress</span>
-                      <span>{formData.progress}%</span>
+                    <div className="mt-4">
+                      <div className="mb-1 flex items-center justify-between text-sm text-slate-500">
+                        <span>Progress</span>
+                        <span>{formData.progress}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-200">
+                        <div
+                          className="h-2 rounded-full bg-amber-600 transition-all"
+                          style={{ width: `${formData.progress}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 rounded-full bg-slate-200">
-                      <div
-                        className="h-2 rounded-full bg-amber-600 transition-all"
-                        style={{ width: `${formData.progress}%` }}
-                      />
-                    </div>
-
                   </div>
                 </div>
               </section>
@@ -688,13 +639,12 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
             >
               Cancel
             </button>
-
             <button
               type="submit"
               disabled={loading}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : null}
+              {loading && <Loader2 size={18} className="animate-spin" />}
               {loading ? "Updating Project..." : "Update Project"}
             </button>
           </div>
