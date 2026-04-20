@@ -1,3 +1,4 @@
+
 // import fs from "fs";
 // import User from "../models/User.js";
 // import { getGridFSBucket } from "../config/gridfs.js";
@@ -10,7 +11,7 @@
 //       username,
 //       email,
 //       password,
-//       researchInterests
+//       researchInterests,
 //     });
 
 //     res.status(201).json(user);
@@ -206,49 +207,6 @@
 // };
 
 // // SEND COLLABORATION REQUEST
-// // export const sendCollaborationRequest = async (req, res) => {
-// //   try {
-// //     const { fromUserId, toUserId } = req.body;
-
-// //     if (!fromUserId || !toUserId) {
-// //       return res.status(400).json({ message: "Both user IDs are required" });
-// //     }
-
-// //     if (fromUserId === toUserId) {
-// //       return res
-// //         .status(400)
-// //         .json({ message: "You cannot send a collaboration request to yourself" });
-// //     }
-
-// //     const fromUser = await User.findById(fromUserId);
-// //     const toUser = await User.findById(toUserId);
-
-// //     if (!fromUser || !toUser) {
-// //       return res.status(404).json({ message: "User not found" });
-// //     }
-
-// //     const alreadySent = toUser.requestedCollaborations.some(
-// //       (userId) => userId.toString() === fromUserId
-// //     );
-
-// //     if (alreadySent) {
-// //       return res.status(400).json({ message: "Collaboration request already sent" });
-// //     }
-
-// //     toUser.requestedCollaborations.push(fromUserId);
-// //     fromUser.sentCollaborations.push(toUserId);
-
-// //     await toUser.save();
-// //     await fromUser.save();
-
-// //     res.status(200).json({
-// //       message: "Collaboration request sent successfully",
-// //     });
-// //   } catch (error) {
-// //     res.status(500).json({ message: error.message });
-// //   }
-// // };
-
 // export const sendCollaborationRequest = async (req, res) => {
 //   try {
 //     const { fromUserId, toUserId } = req.body;
@@ -489,6 +447,139 @@ import fs from "fs";
 import User from "../models/User.js";
 import { getGridFSBucket } from "../config/gridfs.js";
 
+const HF_API_URL = "https://router.huggingface.co/v1/chat/completions";
+const HF_MODEL = "openai/gpt-oss-20b";
+
+const normalizeArray = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+};
+
+const buildLocalCandidateSummary = (currentUser, candidate) => {
+  const currentInterests = normalizeArray(currentUser.researchInterests).map((v) =>
+    v.toLowerCase()
+  );
+  const currentSkills = normalizeArray(currentUser.skills).map((v) =>
+    v.toLowerCase()
+  );
+
+  const candidateInterests = normalizeArray(candidate.researchInterests);
+  const candidateSkills = normalizeArray(candidate.skills);
+
+  const sharedInterests = candidateInterests.filter((item) =>
+    currentInterests.includes(String(item).toLowerCase())
+  );
+
+  const sharedSkills = candidateSkills.filter((item) =>
+    currentSkills.includes(String(item).toLowerCase())
+  );
+
+  return {
+    id: candidate._id.toString(),
+    username: candidate.username,
+    email: candidate.email,
+    aboutMe: candidate.aboutMe || "",
+    researchInterests: candidate.researchInterests || [],
+    skills: candidate.skills || [],
+    relationshipStatus: candidate.relationshipStatus || "",
+    profilePictureId: candidate.profilePictureId || null,
+    sharedInterests,
+    sharedSkills,
+  };
+};
+
+const getSuggestedCollaboratorsFromHF = async (currentUser, candidates) => {
+  if (!process.env.HF_TOKEN) {
+    throw new Error("HF_TOKEN is missing in environment variables");
+  }
+
+  const payload = {
+    currentUser: {
+      id: currentUser._id.toString(),
+      username: currentUser.username,
+      aboutMe: currentUser.aboutMe || "",
+      researchInterests: normalizeArray(currentUser.researchInterests),
+      skills: normalizeArray(currentUser.skills),
+    },
+    candidates: candidates.map((candidate) => ({
+      id: candidate._id.toString(),
+      username: candidate.username,
+      aboutMe: candidate.aboutMe || "",
+      researchInterests: normalizeArray(candidate.researchInterests),
+      skills: normalizeArray(candidate.skills),
+    })),
+  };
+
+  const response = await fetch(HF_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.HF_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: HF_MODEL,
+      stream: false,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `You are an intelligent research collaborator matching assistant.
+
+Return ONLY valid JSON.
+Do not include markdown fences.
+Do not include explanations outside JSON.
+
+Required JSON shape:
+{
+  "matches": [
+    {
+      "id": "candidate user id",
+      "matchScore": 0,
+      "reason": "short explanation",
+      "sharedInterests": ["..."],
+      "sharedSkills": ["..."]
+    }
+  ]
+}
+
+Rules:
+- matchScore must be an integer from 0 to 100.
+- Rank candidates from best to worst.
+- Prefer overlap in researchInterests first, then skills.
+- sharedInterests and sharedSkills must contain only items that actually overlap.
+- Keep reason concise and practical.
+- Return at most 8 matches.
+- If there is no meaningful overlap, DO NOT include that candidate.
+- It is acceptable to return an empty matches array.`,
+        },
+        {
+          role: "user",
+          content: JSON.stringify(payload),
+        },
+      ],
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "Hugging Face API request failed");
+  }
+
+  const rawContent = data?.choices?.[0]?.message?.content || "{}";
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawContent);
+  } catch (error) {
+    throw new Error("Failed to parse Hugging Face model response");
+  }
+
+  return Array.isArray(parsed.matches) ? parsed.matches : [];
+};
+
 export const createUser = async (req, res) => {
   try {
     const { username, email, password, researchInterests } = req.body;
@@ -608,7 +699,7 @@ export const updateUserProfile = async (req, res) => {
     }
 
     if (researchInterests !== undefined) {
-      user.researchInterests = researchInterests;
+      user.researchInterests = normalizeArray(researchInterests);
     }
 
     if (aboutMe !== undefined) {
@@ -616,7 +707,7 @@ export const updateUserProfile = async (req, res) => {
     }
 
     if (skills !== undefined) {
-      user.skills = skills;
+      user.skills = normalizeArray(skills);
     }
 
     if (relationshipStatus !== undefined) {
@@ -904,6 +995,147 @@ export const rejectCollaborationRequest = async (req, res) => {
 
     res.status(200).json({
       message: "Collaboration request rejected successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET SUGGESTED COLLABORATORS
+export const getSuggestedCollaborators = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const currentUser = await User.findById(id)
+      .populate("collaborators", "_id")
+      .select("-password");
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const currentUserHasData =
+      normalizeArray(currentUser.researchInterests).length > 0 ||
+      normalizeArray(currentUser.skills).length > 0;
+
+    if (!currentUserHasData) {
+      return res.status(400).json({
+        message: "Please add research interests or skills first.",
+      });
+    }
+
+    const collaboratorIds = currentUser.collaborators.map((user) =>
+      user._id.toString()
+    );
+
+    const candidates = await User.find({
+      _id: {
+        $ne: currentUser._id,
+        $nin: collaboratorIds,
+      },
+    }).select("-password");
+
+    const usableCandidates = candidates.filter((candidate) => {
+      const hasInterests = normalizeArray(candidate.researchInterests).length > 0;
+      const hasSkills = normalizeArray(candidate.skills).length > 0;
+      return hasInterests || hasSkills;
+    });
+
+    if (usableCandidates.length === 0) {
+      return res.status(200).json({
+        message: "No suitable researchers found.",
+        count: 0,
+        matches: [],
+      });
+    }
+
+    const topPool = usableCandidates.slice(0, 20);
+
+    let aiMatches = [];
+    try {
+      aiMatches = await getSuggestedCollaboratorsFromHF(currentUser, topPool);
+    } catch (error) {
+      console.error("Hugging Face matching failed:", error.message);
+    }
+
+    let matches;
+
+    if (aiMatches.length > 0) {
+      matches = aiMatches
+        .map((match) => {
+          const candidate = topPool.find(
+            (user) => user._id.toString() === String(match.id)
+          );
+
+          if (!candidate) return null;
+
+          const summary = buildLocalCandidateSummary(currentUser, candidate);
+
+          return {
+            user: {
+              id: summary.id,
+              username: summary.username,
+              email: summary.email,
+              aboutMe: summary.aboutMe,
+              researchInterests: summary.researchInterests,
+              skills: summary.skills,
+              relationshipStatus: summary.relationshipStatus,
+              profilePictureId: summary.profilePictureId,
+            },
+            matchScore: Number(match.matchScore) || 0,
+            reason: match.reason || "Good potential collaborator match.",
+            sharedInterests: Array.isArray(match.sharedInterests)
+              ? match.sharedInterests
+              : summary.sharedInterests,
+            sharedSkills: Array.isArray(match.sharedSkills)
+              ? match.sharedSkills
+              : summary.sharedSkills,
+          };
+        })
+        .filter(Boolean)
+        .filter(
+          (m) =>
+            m.sharedInterests.length > 0 ||
+            m.sharedSkills.length > 0
+        )
+        .sort((a, b) => b.matchScore - a.matchScore);
+    } else {
+      matches = topPool
+        .map((candidate) => {
+          const summary = buildLocalCandidateSummary(currentUser, candidate);
+
+          const score =
+            summary.sharedInterests.length * 20 + summary.sharedSkills.length * 15;
+
+          return {
+            user: {
+              id: summary.id,
+              username: summary.username,
+              email: summary.email,
+              aboutMe: summary.aboutMe,
+              researchInterests: summary.researchInterests,
+              skills: summary.skills,
+              relationshipStatus: summary.relationshipStatus,
+              profilePictureId: summary.profilePictureId,
+            },
+            matchScore: Math.min(score, 100),
+            reason: "Matched using shared research interests and skills.",
+            sharedInterests: summary.sharedInterests,
+            sharedSkills: summary.sharedSkills,
+          };
+        })
+        .filter(
+          (item) =>
+            item.sharedInterests.length > 0 || item.sharedSkills.length > 0
+        )
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 8);
+    }
+
+    res.status(200).json({
+      message: "Suggested collaborators fetched successfully",
+      count: matches.length,
+      matches,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

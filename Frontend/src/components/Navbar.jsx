@@ -1,5 +1,4 @@
 
-
 import { Bell, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useChatSidebar } from "../context/ChatSidebarContext";
@@ -26,8 +25,6 @@ const Navbar = () => {
       <div className="logo">RESEARCH CONNECT</div>
 
       <nav className="nav-links">
-
-
         <Link to="/home">Home</Link>
         <Link to="/researchers">Collaborate</Link>
 
@@ -44,7 +41,6 @@ const Navbar = () => {
 
       <div className="nav-icons">
         <Bell size={20} />
-       
 
         {/* ✅ Chat toggle */}
         <MessageCircle
@@ -68,6 +64,5 @@ const Navbar = () => {
     </header>
   );
 };
-
 
 export default Navbar;
