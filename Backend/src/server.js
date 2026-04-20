@@ -137,6 +137,7 @@ import fundingRoutes from "./routes/fundingRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import milestoneRoutes from "./routes/milestoneRoutes.js";
 
 dotenv.config();
 
@@ -209,6 +210,7 @@ app.use("/api/funding", fundingRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/milestones", milestoneRoutes);
 
 // Default route
 app.get("/", (req, res) => {

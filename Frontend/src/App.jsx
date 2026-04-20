@@ -15,7 +15,7 @@ import Funding from "./pages/Funding";
 import CreateFunding from "./pages/CreateFunding";
 import EditFunding from "./pages/EditFunding";
 import ProjectDetails from "./pages/ProjectDetails";
-
+import MilestonesPage from './pages/MilestonesPage';
 import {
   ChatSidebarProvider,
   useChatSidebar,
@@ -46,6 +46,7 @@ function AppRoutes() {
       <Route path="/funding" element={<Funding />} />
       <Route path="/funding/new" element={<CreateFunding />} />
       <Route path="/funding/edit/:id" element={<EditFunding />} />
+      <Route path="/projects/:id/milestones" element={<MilestonesPage />} />
     </Routes>
   );
 }

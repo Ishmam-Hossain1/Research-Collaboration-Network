@@ -44,7 +44,9 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
     abstract: "",
     researchField: "",
     status: "ongoing",
+
     progress: 0,
+
     objective: "",
     methodology: "",
     expectedOutcome: "",
@@ -72,6 +74,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
         abstract: project.abstract || "",
         researchField: project.researchField || "",
         status: project.status || "ongoing",
+
         progress: project.progress ?? 0,
         objective: project.objective || "",
         methodology: project.methodology || "",
@@ -96,7 +99,11 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
 
     setFormData((prev) => ({
       ...prev,
+
+      [name]: value,
+
       [name]: name === "progress" ? Number(value) : value,
+
     }));
   };
 
@@ -164,10 +171,12 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
       return;
     }
 
+
     if (formData.progress < 0 || formData.progress > 100) {
       alert("Progress must be between 0 and 100");
       return;
     }
+
 
     if (
       formData.startDate &&
@@ -186,7 +195,10 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
         abstract: formData.abstract.trim(),
         researchField: formData.researchField.trim(),
         status: formData.status,
+
+
         progress: Number(formData.progress),
+
         objective: formData.objective.trim(),
         methodology: formData.methodology.trim(),
         expectedOutcome: formData.expectedOutcome.trim(),
@@ -437,6 +449,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                                   : prev.progress === 100
                                   ? 75
                                   : prev.progress,
+
                             }))
                           }
                           className={`w-full rounded-2xl border p-4 text-left transition ${
@@ -455,6 +468,18 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       );
                     })}
                   </div>
+
+
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="font-semibold text-slate-900">
+                      Progress is milestone-based
+                    </div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      Current progress is calculated automatically from completed milestones and subtasks.
+                    </div>
+                    <div className="mt-2 text-sm font-medium text-amber-700">
+                      Current progress: {project.progress ?? 0}%
+                    </div>
 
                   <div>
                     <div className="mb-2 flex items-center justify-between">
@@ -485,6 +510,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       onChange={handleChange}
                       className="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
                     />
+
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -632,6 +658,10 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                     </div>
                   ) : null}
 
+
+                  <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600">
+                    Progress is automatic and currently {project.progress ?? 0}% based on milestone completion.
+
                   <div className="mt-4">
                     <div className="mb-1 flex items-center justify-between text-sm text-slate-500">
                       <span>Progress</span>
@@ -643,6 +673,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                         style={{ width: `${formData.progress}%` }}
                       />
                     </div>
+
                   </div>
                 </div>
               </section>

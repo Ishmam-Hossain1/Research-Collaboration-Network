@@ -1,3 +1,4 @@
+
 // import { useMemo, useState } from "react";
 // import {
 //   X,
@@ -676,6 +677,7 @@
 
 // export default CreateProjectModal;
 
+>>>>>>> d4ca9520eadc1b5cfe31155040e8460e46ef393a
 import { useMemo, useState } from "react";
 import {
   X,
@@ -716,6 +718,7 @@ const STATUS_OPTIONS = [
   },
 ];
 
+
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [formData, setFormData] = useState({
     title: "",
@@ -750,6 +753,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
     setFormData((prev) => ({
       ...prev,
+      [name]: value,
       [name]: name === "progress" ? Number(value) : value,
     }));
   };
@@ -844,12 +848,10 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       alert("Please select or enter a research field");
       return;
     }
-
     if (formData.progress < 0 || formData.progress > 100) {
       alert("Progress must be between 0 and 100");
       return;
     }
-
     if (
       formData.startDate &&
       formData.endDate &&
@@ -866,6 +868,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
         title: formData.title.trim(),
         abstract: formData.abstract.trim(),
         researchField: formData.researchField.trim(),
+        status: "ongoing",
         status: formData.status,
         progress: Number(formData.progress),
         objective: formData.objective.trim(),
@@ -1104,11 +1107,19 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                   <div className="mb-4 flex items-center gap-2">
                     <Target size={18} className="text-blue-600" />
                     <h3 className="text-lg font-semibold text-slate-900">
+                      Timeline & Funding
                       Status & Timeline
                     </h3>
                   </div>
 
                   <div className="space-y-5">
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                      <div className="font-semibold text-slate-900">
+                        Project progress is automatic
+                      </div>
+                      <div className="mt-1 text-sm text-slate-600">
+                        Progress will start at 0% and update automatically as milestones are completed.
+                      </div>
                     <div className="space-y-3">
                       {STATUS_OPTIONS.map((option) => {
                         const active = formData.status === option.value;
@@ -1298,7 +1309,11 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                         {formData.researchField || "Research Field"}
                       </span>
                       <span className="text-sm capitalize text-slate-500">
+
+                        ongoing
+
                         {formData.status}
+
                       </span>
                     </div>
 
@@ -1323,6 +1338,10 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                         ))}
                       </div>
                     ) : null}
+
+
+                    <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600">
+                      Progress will be calculated automatically from completed milestones.
 
                     <div className="mt-4">
                       <div className="mb-1 flex items-center justify-between text-sm text-slate-500">

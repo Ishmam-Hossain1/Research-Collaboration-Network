@@ -14,6 +14,14 @@ import {
 
 const router = express.Router();
 
+router.post("/", protect, createProject);
+router.get("/", getAllProjects);
+router.get("/my", protect, getMyProjects);
+router.get("/my/stats", protect, getMyProjectStats);
+router.get("/user/:userId", getProjectsByUser);
+router.get("/user/:userId/stats", getProjectStatsByUser);
+router.get("/:id", getProjectById);
+router.put("/:id", protect, updateProject);
 // CREATE PROJECT (logged-in user only)
 router.post("/", protect, createProject);
 
