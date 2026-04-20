@@ -210,10 +210,8 @@ app.use("/api/funding", fundingRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
-<<<<<<< HEAD
-=======
 app.use("/api/milestones", milestoneRoutes);
->>>>>>> origin/ishmam/homepage-ui
+
 
 // Default route
 app.get("/", (req, res) => {
