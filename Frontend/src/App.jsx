@@ -16,6 +16,7 @@ import CreateFunding from "./pages/CreateFunding";
 import EditFunding from "./pages/EditFunding";
 import ProjectDetails from "./pages/ProjectDetails";
 import MilestonesPage from './pages/MilestonesPage';
+
 import {
   ChatSidebarProvider,
   useChatSidebar,

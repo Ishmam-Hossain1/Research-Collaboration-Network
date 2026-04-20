@@ -212,6 +212,7 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/milestones", milestoneRoutes);
 
+
 // Default route
 app.get("/", (req, res) => {
   res.send("API is running...");
