@@ -8,10 +8,14 @@ import {
   Tags,
   Landmark,
   ArrowUpDown,
+  ExternalLink,
+  Star,
+  MessageSquare,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import api from "../lib/api";
+import FeedbackModal from "../components/FeedbackModal";
 
 const ALL_RESEARCH_FIELDS = [
   "Artificial Intelligence",
@@ -51,6 +55,7 @@ const AllProjects = () => {
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [feedbackProject, setFeedbackProject] = useState(null);
 
   const [search, setSearch] = useState("");
   const [field, setField] = useState("");
@@ -237,17 +242,28 @@ const AllProjects = () => {
           ) : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {projects.map((project) => (
-                <PublicProjectCard key={project._id} project={project} />
+                <PublicProjectCard
+                  key={project._id}
+                  project={project}
+                  onFeedbackClick={setFeedbackProject}
+                />
               ))}
             </div>
           )}
         </section>
       </main>
+
+      {feedbackProject && (
+        <FeedbackModal
+          project={feedbackProject}
+          onClose={() => setFeedbackProject(null)}
+        />
+      )}
     </div>
   );
 };
 
-const PublicProjectCard = ({ project }) => {
+const PublicProjectCard = ({ project, onFeedbackClick }) => {
   const formattedStartDate = project.startDate
     ? new Date(project.startDate).toLocaleDateString()
     : null;
@@ -263,7 +279,7 @@ const PublicProjectCard = ({ project }) => {
       ? "bg-blue-600"
       : project.progress >= 40
       ? "bg-amber-500"
-      : "bg-slate-500";
+      : "bg-rose-500";
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -283,7 +299,7 @@ const PublicProjectCard = ({ project }) => {
         </span>
       </div>
 
-      <h3 className="line-clamp-2 text-xl font-bold text-slate-900">
+      <h3 className="line-clamp-2 text-xl font-bold text-slate-900 transition-colors group-hover:text-blue-600">
         {project.title}
       </h3>
 
@@ -293,7 +309,10 @@ const PublicProjectCard = ({ project }) => {
 
       {project.owner && (
         <p className="mt-3 text-sm text-slate-500">
-          By <span className="font-semibold text-slate-700">{project.owner.username}</span>
+          By{" "}
+          <span className="font-semibold text-slate-700">
+            {project.owner.username}
+          </span>
         </p>
       )}
 
@@ -356,6 +375,24 @@ const PublicProjectCard = ({ project }) => {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
+        <button
+          onClick={() => onFeedbackClick(project)}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"
+        >
+          <Star size={14} className="fill-amber-400 text-amber-500" />
+          Give Feedback
+        </button>
+
+        <button
+          onClick={() => (window.location.href = `/projects/${project._id}`)}
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          <ExternalLink size={16} />
+          View Details
+        </button>
       </div>
     </div>
   );
