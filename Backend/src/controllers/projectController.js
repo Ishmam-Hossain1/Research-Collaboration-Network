@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Project from "../models/Project.js";
+import Milestone from "../models/Milestone.js";
 
 const buildSortOption = (sort) => {
   let sortOption = { createdAt: -1 };
@@ -24,6 +25,108 @@ const normalizeArrayField = (value) => {
   return value
     .map((item) => String(item).trim())
     .filter(Boolean);
+};
+
+const addDays = (date, days) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+const buildDefaultResearchMilestones = (projectStartDate) => {
+  const baseDate = projectStartDate ? new Date(projectStartDate) : new Date();
+
+  const roadmap = [
+    {
+      title: "Title",
+      description: "Finalize the research paper title",
+      order: 0,
+      offsetStart: 0,
+      offsetDeadline: 2,
+    },
+    {
+      title: "Abstract",
+      description: "Write the research abstract",
+      order: 1,
+      offsetStart: 2,
+      offsetDeadline: 5,
+    },
+    {
+      title: "Introduction",
+      description: "Write the introduction and problem statement",
+      order: 2,
+      offsetStart: 5,
+      offsetDeadline: 9,
+    },
+    {
+      title: "Literature Review",
+      description: "Review related work and identify research gaps",
+      order: 3,
+      offsetStart: 9,
+      offsetDeadline: 16,
+    },
+    {
+      title: "Methodology",
+      description: "Define methods, tools, and research design",
+      order: 4,
+      offsetStart: 16,
+      offsetDeadline: 22,
+    },
+    {
+      title: "Data Collection",
+      description: "Collect data or conduct experiments",
+      order: 5,
+      offsetStart: 22,
+      offsetDeadline: 30,
+    },
+    {
+      title: "Data Analysis",
+      description: "Analyze findings and interpret data",
+      order: 6,
+      offsetStart: 30,
+      offsetDeadline: 37,
+    },
+    {
+      title: "Results",
+      description: "Write the results section",
+      order: 7,
+      offsetStart: 37,
+      offsetDeadline: 43,
+    },
+    {
+      title: "Discussion",
+      description: "Discuss findings and compare with literature",
+      order: 8,
+      offsetStart: 43,
+      offsetDeadline: 49,
+    },
+    {
+      title: "Conclusion",
+      description: "Summarize the work and final contribution",
+      order: 9,
+      offsetStart: 49,
+      offsetDeadline: 53,
+    },
+    {
+      title: "References",
+      description: "Complete citations and references",
+      order: 10,
+      offsetStart: 53,
+      offsetDeadline: 56,
+    },
+  ];
+
+  return roadmap.map((m) => ({
+    title: m.title,
+    description: m.description,
+    status: "Pending",
+    order: m.order,
+    isDefault: true,
+    weight: 1,
+    startDate: addDays(baseDate, m.offsetStart),
+    deadline: addDays(baseDate, m.offsetDeadline),
+    subtasks: [],
+  }));
 };
 
 // CREATE PROJECT
@@ -74,6 +177,7 @@ export const createProject = async (req, res) => {
       abstract: abstract.trim(),
       researchField: researchField.trim(),
       status: status || "ongoing",
+      progress: 0,
       progress: progress ?? 0,
       objective: objective?.trim() || "",
       methodology: methodology?.trim() || "",
@@ -86,12 +190,23 @@ export const createProject = async (req, res) => {
       owner: req.user._id,
     });
 
+    const defaultMilestones = buildDefaultResearchMilestones(startDate);
+
+    const milestonesToInsert = defaultMilestones.map((m) => ({
+      projectId: newProject._id,
+      ...m,
+    }));
+
+    await Milestone.insertMany(milestonesToInsert);
+
     const populatedProject = await Project.findById(newProject._id).populate(
       "owner",
       "username email"
     );
 
     res.status(201).json({
+
+      message: "Project created successfully with default research milestones",
       message: "Project created successfully",
       project: populatedProject,
     });
@@ -274,6 +389,8 @@ export const updateProject = async (req, res) => {
     if (abstract !== undefined) project.abstract = abstract.trim();
     if (researchField !== undefined) project.researchField = researchField.trim();
     if (status !== undefined) project.status = status;
+
+
     if (progress !== undefined) project.progress = progress;
 
     if (objective !== undefined) project.objective = objective.trim();
@@ -328,6 +445,8 @@ export const deleteProject = async (req, res) => {
       });
     }
 
+
+    await Milestone.deleteMany({ projectId: id });
     await Project.findByIdAndDelete(id);
 
     res.status(200).json({
