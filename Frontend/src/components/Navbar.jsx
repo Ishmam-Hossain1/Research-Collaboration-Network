@@ -37,6 +37,8 @@ const Navbar = () => {
 
         <a href="#">Conference</a>
         <a href="#">Equipment</a>
+        
+        <Link to="/resources">Resources</Link>
       </nav>
 
       <div className="nav-icons">

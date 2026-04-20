@@ -1,21 +1,25 @@
+<<<<<<< HEAD
+import { Routes, Route, Navigate } from "react-router-dom";
+=======
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
+>>>>>>> f38871ccdc671e2ae2fbbe11979b177d8167c210
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Homepage";
 import UserProfile from "./pages/UserProfile";
-import Dashboard from "./pages/Dashboard";
-import AllProjects from "./pages/AllProjects";
-import DatasetList from "./pages/DatasetList";
-import UploadDataset from "./pages/UploadDataset";
 import Researchers from "./pages/Researchers";
 import ResearcherProfile from "./pages/ResearcherProfile";
 import CollaborationRequests from "./pages/CollaborationRequests";
 import Funding from "./pages/Funding";
 import CreateFunding from "./pages/CreateFunding";
 import EditFunding from "./pages/EditFunding";
+<<<<<<< HEAD
+import Resources from "./pages/Resources";
+=======
 import ProjectDetails from "./pages/ProjectDetails";
 import MilestonesPage from './pages/MilestonesPage';
+>>>>>>> f38871ccdc671e2ae2fbbe11979b177d8167c210
 
 import {
   ChatSidebarProvider,
@@ -32,12 +36,13 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/home" element={<Home />} />
+<<<<<<< HEAD
+=======
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/projects" element={<AllProjects />} />
       <Route path="/projects/:id" element={<ProjectDetails />} />
+>>>>>>> f38871ccdc671e2ae2fbbe11979b177d8167c210
       <Route path="/profile" element={<UserProfile />} />
-      <Route path="/datasets" element={<DatasetList />} />
-      <Route path="/upload-dataset" element={<UploadDataset />} />
       <Route path="/researchers" element={<Researchers />} />
       <Route path="/researchers/:id" element={<ResearcherProfile />} />
       <Route
@@ -47,7 +52,11 @@ function AppRoutes() {
       <Route path="/funding" element={<Funding />} />
       <Route path="/funding/new" element={<CreateFunding />} />
       <Route path="/funding/edit/:id" element={<EditFunding />} />
+<<<<<<< HEAD
+      <Route path="/resources" element={<Resources />} />
+=======
       <Route path="/projects/:id/milestones" element={<MilestonesPage />} />
+>>>>>>> f38871ccdc671e2ae2fbbe11979b177d8167c210
     </Routes>
   );
 }
