@@ -303,23 +303,7 @@ const Funding = () => {
                               </div>
 
                               {isOwner && (
-                                // <div className="mt-4 flex gap-3 lg:justify-end">
-                                //   <button
-                                //     onClick={() =>
-                                //       navigate(`/funding/edit/${item._id}`)
-                                //     }
-                                //     className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 font-medium text-blue-600 transition hover:bg-blue-100"
-                                //   >
-                                //     Edit
-                                //   </button>
 
-                                //   <button
-                                //     onClick={() => openDeleteModal(item._id)}
-                                //     className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 font-medium text-red-600 transition hover:bg-red-100"
-                                //   >
-                                //     Delete
-                                //   </button>
-                                // </div>
                                 <div className="mt-4 flex gap-2 lg:justify-end">
                                     <button
                                         onClick={() =>

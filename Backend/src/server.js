@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import datasetRoutes from "./routes/datasetRoutes.js";
 import fundingRoutes from "./routes/fundingRoutes.js";
+import resourceRoutes from "./routes/resourceRoutes.js";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/datasets", datasetRoutes);
 app.use("/api/funding", fundingRoutes);
+app.use("/api/resources", resourceRoutes);
 
 // Default route
 app.get("/", (req, res) => {
