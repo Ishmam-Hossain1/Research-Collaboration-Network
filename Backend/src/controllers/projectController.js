@@ -137,6 +137,7 @@ export const createProject = async (req, res) => {
       abstract,
       researchField,
       status,
+      progress,
       objective,
       methodology,
       expectedOutcome,
@@ -159,6 +160,12 @@ export const createProject = async (req, res) => {
       });
     }
 
+    if (progress !== undefined && (progress < 0 || progress > 100)) {
+      return res.status(400).json({
+        message: "Progress must be between 0 and 100",
+      });
+    }
+
     if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
       return res.status(400).json({
         message: "End date must be after start date",
@@ -171,6 +178,7 @@ export const createProject = async (req, res) => {
       researchField: researchField.trim(),
       status: status || "ongoing",
       progress: 0,
+      progress: progress ?? 0,
       objective: objective?.trim() || "",
       methodology: methodology?.trim() || "",
       expectedOutcome: expectedOutcome?.trim() || "",
@@ -197,7 +205,9 @@ export const createProject = async (req, res) => {
     );
 
     res.status(201).json({
+
       message: "Project created successfully with default research milestones",
+      message: "Project created successfully",
       project: populatedProject,
     });
   } catch (error) {
@@ -330,6 +340,7 @@ export const updateProject = async (req, res) => {
       abstract,
       researchField,
       status,
+      progress,
       objective,
       methodology,
       expectedOutcome,
@@ -347,6 +358,12 @@ export const updateProject = async (req, res) => {
     if (status && !["ongoing", "completed"].includes(status)) {
       return res.status(400).json({
         message: "Status must be either ongoing or completed",
+      });
+    }
+
+    if (progress !== undefined && (progress < 0 || progress > 100)) {
+      return res.status(400).json({
+        message: "Progress must be between 0 and 100",
       });
     }
 
@@ -372,6 +389,9 @@ export const updateProject = async (req, res) => {
     if (abstract !== undefined) project.abstract = abstract.trim();
     if (researchField !== undefined) project.researchField = researchField.trim();
     if (status !== undefined) project.status = status;
+
+
+    if (progress !== undefined) project.progress = progress;
 
     if (objective !== undefined) project.objective = objective.trim();
     if (methodology !== undefined) project.methodology = methodology.trim();
@@ -424,6 +444,7 @@ export const deleteProject = async (req, res) => {
         message: "Not authorized to delete this project",
       });
     }
+
 
     await Milestone.deleteMany({ projectId: id });
     await Project.findByIdAndDelete(id);
