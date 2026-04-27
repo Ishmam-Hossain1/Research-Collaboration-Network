@@ -26,7 +26,8 @@ const EditFunding = () => {
           setFormData({
             grantTitle: data.grantTitle || "",
             fundingAmount: data.fundingAmount || "",
-            deadline: data.deadline ? data.deadline.split("T")[0] : "",
+            // deadline: data.deadline ? data.deadline.split("T")[0] : "",
+            deadline: data.deadline ? new Date(data.deadline).toISOString().slice(0, 16) : "",
             eligibilityCriteria: data.eligibilityCriteria || "",
           });
         } else {
@@ -253,7 +254,7 @@ const EditFunding = () => {
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
                         <input
                           id="deadline"
-                          type="date"
+                          type="datetime-local"
                           name="deadline"
                           value={formData.deadline}
                           onChange={handleChange}
