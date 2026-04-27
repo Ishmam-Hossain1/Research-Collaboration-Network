@@ -476,118 +476,125 @@ const ResourceCard = ({
 
   const myRating = myRatingEntry?.value || 0;
   const averageRating = Number(resource.averageRating || 0).toFixed(1);
-//   const displayRating = myRating || averageRating;
   const totalRatings = resource.ratings?.length || 0;
   const bookmarkCount = resource.bookmarks?.length || 0;
 
   return (
-    <article className="group rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${getDomain(resource.link)}&sz=64`}
-              alt="logo"
-              className="h-8 w-8 object-contain"
-            />
+    <article className="group relative rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+
+      {/* 🔥 BLUE GLOW EFFECT */}
+      <div className="pointer-events-none absolute inset-0 rounded-[28px] opacity-0 transition duration-300 group-hover:opacity-100">
+        <div className="absolute inset-0 rounded-[28px] bg-gradient-to-r from-cyan-400/20 via-blue-400/20 to-indigo-400/20 blur-xl"></div>
+      </div>
+
+      <div className="relative z-10">
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 transition group-hover:scale-110">
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${getDomain(resource.link)}&sz=64`}
+                alt="logo"
+                className="h-8 w-8 object-contain"
+              />
+            </div>
+
+            <div>
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${meta.badge}`}
+              >
+                {resource.category}
+              </span>
+            </div>
           </div>
 
+          <button
+            onClick={() => onBookmarkToggle(resource._id)}
+            disabled={loading}
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
+              isBookmarked
+                ? "border-slate-900 bg-slate-900 text-white"
+                : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            <Bookmark size={16} className={isBookmarked ? "fill-current" : ""} />
+          </button>
+        </div>
+
+        <h3 className="line-clamp-2 text-xl font-semibold text-slate-900 group-hover:text-blue-600 transition">
+          {resource.title}
+        </h3>
+
+        <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-500">
+          {resource.description}
+        </p>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+            {bookmarkCount} bookmark{bookmarkCount !== 1 ? "s" : ""}
+          </div>
+
+          {resource.createdBy?.username ? (
+            <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+              By {resource.createdBy.username}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 flex items-center justify-between gap-3">
           <div>
-            <span
-              className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${meta.badge}`}
-            >
-              {resource.category}
+            <p className="mb-2 text-sm font-medium text-slate-700">
+              Your rating
+            </p>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((item) => {
+                const active = item <= myRating;
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    disabled={loading}
+                    onClick={() => onRate(resource._id, item)}
+                    className="rounded-full p-1 transition hover:scale-110 disabled:opacity-60"
+                  >
+                    <Star
+                      size={18}
+                      className={
+                        active
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-slate-300"
+                      }
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ⭐ Average Rating */}
+          <div className="rounded-2xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+            ★ {averageRating}
+            <span className="ml-1 text-xs font-medium text-amber-600">
+              ({totalRatings})
             </span>
           </div>
         </div>
 
-        <button
-          onClick={() => onBookmarkToggle(resource._id)}
-          disabled={loading}
-          className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
-            isBookmarked
-              ? "border-slate-900 bg-slate-900 text-white"
-              : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-          } disabled:cursor-not-allowed disabled:opacity-60`}
-        >
-          <Bookmark size={16} className={isBookmarked ? "fill-current" : ""} />
-        </button>
-      </div>
+        <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          <span className="truncate text-xs text-slate-400">
+            {resource.link?.replace(/^https?:\/\//, "")}
+          </span>
 
-      <h3 className="line-clamp-2 text-xl font-semibold text-slate-900">
-        {resource.title}
-      </h3>
-
-      <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-500">
-        {resource.description}
-      </p>
-
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
-          {bookmarkCount} bookmark{bookmarkCount !== 1 ? "s" : ""}
+          <a
+            href={resource.link}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
+          >
+            Visit
+            <ExternalLink size={15} />
+          </a>
         </div>
-
-        {resource.createdBy?.username ? (
-          <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
-            By {resource.createdBy.username}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <div>
-          <p className="mb-2 text-sm font-medium text-slate-700">Your rating</p>
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((item) => {
-              const active = item <= myRating;
-
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  disabled={loading}
-                  onClick={() => onRate(resource._id, item)}
-                  className="rounded-full p-1 transition hover:scale-110 disabled:opacity-60"
-                >
-                  <Star
-                    size={18}
-                    className={
-                      active
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-slate-300"
-                    }
-                  />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* <div className="rounded-2xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
-          ★ {displayRating}
-        </div> */}
-        <div className="rounded-2xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
-        ★ {averageRating}
-        <span className="ml-1 text-xs font-medium text-amber-600">
-            ({totalRatings})
-        </span>
-        </div>
-      </div>
-
-      <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-        <span className="truncate text-xs text-slate-400">
-          {resource.link?.replace(/^https?:\/\//, "")}
-        </span>
-
-        <a
-          href={resource.link}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-        >
-          Visit
-          <ExternalLink size={15} />
-        </a>
       </div>
     </article>
   );

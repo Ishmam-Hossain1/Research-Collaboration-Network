@@ -3,6 +3,7 @@ import { GridFSBucket } from "mongodb";
 
 let gfsBucket;
 let datasetsBucket;
+let grantApplicationsBucket;
 
 export const initGridFS = () => {
   const db = mongoose.connection.db;
@@ -19,7 +20,11 @@ export const initGridFS = () => {
     bucketName: "datasets",
   });
 
-  console.log("GridFS initialized (profilePictures + datasets)");
+  grantApplicationsBucket = new GridFSBucket(db, {
+    bucketName: "grantApplications",
+  });
+
+  console.log("GridFS initialized (profilePictures + datasets + grantApplications)");
 };
 
 export const getGridFSBucket = () => {
@@ -34,4 +39,11 @@ export const getDatasetsBucket = () => {
     throw new Error("Datasets GridFSBucket is not initialized");
   }
   return datasetsBucket;
+};
+
+export const getGrantApplicationsBucket = () => {
+  if (!grantApplicationsBucket) {
+    throw new Error("Grant applications GridFSBucket is not initialized");
+  }
+  return grantApplicationsBucket;
 };
