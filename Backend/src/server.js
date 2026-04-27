@@ -136,6 +136,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import milestoneRoutes from "./routes/milestoneRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js"; // ✅ NEW
 import grantApplicationRoutes from "./routes/grantApplicationRoutes.js";
+import { startReminderJob } from "./jobs/reminderJob.js";
 
 dotenv.config();
 
@@ -226,6 +227,7 @@ const startServer = async () => {
     console.log("MongoDB connected successfully");
 
     initGridFS();
+    startReminderJob();
 
     server.listen(PORT, () => {
       console.log(`Server started on PORT: ${PORT}`);
