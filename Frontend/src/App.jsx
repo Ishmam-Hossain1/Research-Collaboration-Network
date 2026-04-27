@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Login from "./pages/Login";
@@ -29,6 +30,7 @@ import {
 import { Sidebar, SidebarBody } from "./components/ui/sidebar";
 import ChatSidebarContent from "./components/ChatSidebarContent";
 import ChatWindow from "./components/ChatWindow";
+import FloatingAIChatbot from "./components/FloatingAIChatbot";
 
 function AppRoutes() {
   return (
@@ -65,6 +67,8 @@ function AppRoutes() {
 function GlobalChatSidebar() {
   const { isChatSidebarOpen, setIsChatSidebarOpen } = useChatSidebar();
 
+  if (!isChatSidebarOpen) return null;
+
   return (
     <div className="pointer-events-none fixed right-0 top-[78px] z-20 h-[calc(100vh-78px)]">
       <div className="pointer-events-auto h-full">
@@ -91,6 +95,7 @@ function AppContent() {
     <>
       {!hideChat && <GlobalChatSidebar />}
       {!hideChat && <ChatWindow />}
+      {!hideChat && <FloatingAIChatbot />}
       <AppRoutes />
     </>
   );
