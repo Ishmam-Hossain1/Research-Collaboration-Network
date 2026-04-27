@@ -135,6 +135,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import milestoneRoutes from "./routes/milestoneRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js"; // ✅ NEW
+import grantApplicationRoutes from "./routes/grantApplicationRoutes.js";
 
 dotenv.config();
 
@@ -210,6 +211,8 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/ai", aiRoutes); // ✅ NEW
+app.use("/api/grant-applications", grantApplicationRoutes);
+
 
 // Default route
 app.get("/", (req, res) => {
