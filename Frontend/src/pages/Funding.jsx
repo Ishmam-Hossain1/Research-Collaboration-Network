@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 const Funding = () => {
   const navigate = useNavigate();
   const [fundingList, setFundingList] = useState([]);
+  const [myApplications, setMyApplications] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -37,8 +38,34 @@ const Funding = () => {
     }
   };
 
+  const fetchMyApplications = async () => {
+  try {
+    const token = localStorage.getItem("researchConnectToken");
+
+    if (!token) return;
+
+    const response = await fetch(
+      "http://localhost:5000/api/grant-applications/mine",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setMyApplications(data.applications || []);
+    }
+  } catch (error) {
+    console.error("Error fetching my applications:", error);
+  }
+};
+
   useEffect(() => {
     fetchFundingOpportunities();
+    fetchMyApplications();
   }, []);
 
   const openDeleteModal = (id) => {
@@ -195,12 +222,28 @@ const Funding = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => navigate("/funding/new")}
-                className="mt-5 w-full rounded-2xl bg-blue-600 px-6 py-3.5 font-semibold text-white shadow-[0_12px_30px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
-              >
-                + New Funding
-              </button>
+              <div className="mt-5 space-y-3">
+                <button
+                  onClick={() => navigate("/funding/new")}
+                  className="w-full rounded-2xl bg-blue-600 px-6 py-3.5 font-semibold text-white shadow-[0_12px_30px_rgba(37,99,235,0.25)] transition hover:bg-blue-700"
+                >
+                  + New Funding
+                </button>
+
+                <button
+                  onClick={() => navigate("/grant-applications/mine")}
+                  className="w-full rounded-2xl border border-blue-200 bg-blue-50 px-6 py-3.5 font-semibold text-blue-700 transition hover:bg-blue-100"
+                >
+                  My Applications
+                </button>
+
+                <button
+                  onClick={() => navigate("/grant-applications/received")}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-900 px-6 py-3.5 font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Received Applications
+                </button>
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_16px_45px_rgba(15,23,42,0.08)]">
@@ -249,6 +292,20 @@ const Funding = () => {
                             item.postedBy?.email ||
                             "Unknown"
                           : "Unknown";
+
+                      const myApplication = myApplications.find(
+                        (application) =>
+                          application.fundingOpportunity?._id === item._id ||
+                          application.fundingOpportunity === item._id
+                      );
+
+                      const hasActiveApplication =
+                        myApplication &&
+                        ["submitted", "under_review"].includes(myApplication.status);
+
+                      const canApplyAgain =
+                        !myApplication ||
+                        ["approved", "rejected"].includes(myApplication.status);
 
                       return (
                         <div
@@ -302,26 +359,46 @@ const Funding = () => {
                                 </p>
                               </div>
 
-                              {isOwner && (
+                              <div className="mt-4 space-y-2">
+                              
+                              <div className="mt-4 space-y-2">
+                                {!isOwner && hasActiveApplication && (
+                                  <button
+                                    onClick={() => navigate(`/grant-applications/${myApplication._id}/edit`)}
+                                    className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(245,158,11,0.22)] transition hover:bg-amber-600"
+                                  >
+                                    Edit Application
+                                  </button>
+                                )}
 
-                                <div className="mt-4 flex gap-2 lg:justify-end">
+                                {!isOwner && canApplyAgain && (
+                                  <button
+                                    onClick={() => navigate(`/funding/${item._id}/apply`)}
+                                    className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.22)] transition hover:bg-blue-700"
+                                  >
+                                    Apply Now
+                                  </button>
+                                )}
+
+                                {isOwner && (
+                                  <div className="flex gap-2 lg:justify-end">
                                     <button
-                                        onClick={() =>
-                                        navigate(`/funding/edit/${item._id}`)
-                                        }
-                                        className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
+                                      onClick={() => navigate(`/funding/edit/${item._id}`)}
+                                      className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 transition hover:bg-blue-100"
                                     >
-                                        Edit
+                                      Edit
                                     </button>
 
                                     <button
-                                        onClick={() => openDeleteModal(item._id)}
-                                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-100"
+                                      onClick={() => openDeleteModal(item._id)}
+                                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-100"
                                     >
-                                        Delete
+                                      Delete
                                     </button>
-                                </div>
-                              )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                             </div>
                           </div>
                         </div>
