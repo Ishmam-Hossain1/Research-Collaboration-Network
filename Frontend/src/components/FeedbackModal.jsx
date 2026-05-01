@@ -179,7 +179,7 @@ const FeedbackModal = ({ project, onClose }) => {
             } else {
                 res = await api.post(`/feedback/${project._id}`, { rating, comment });
                 const existingIdx = feedbacks.findIndex(
-                    (f) => f.user?._id === user._id || f.user === user._id
+                    (f) => f.user?._id === user.id || f.user === user.id
                 );
                 if (existingIdx !== -1) {
                     const updated = [...feedbacks];
@@ -450,7 +450,7 @@ const FeedbackModal = ({ project, onClose }) => {
                                     {feedbacks.map((f) => {
                                         const isOwner =
                                             user &&
-                                            (f.user?._id === user._id || f.user === user._id);
+                                            (f.user?._id === user.id || f.user === user.id);
                                         const initial =
                                             f.user?.username?.charAt(0)?.toUpperCase() || "U";
                                         const palette = [

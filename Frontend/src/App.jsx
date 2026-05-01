@@ -22,6 +22,8 @@ import ApplyGrant from "./pages/ApplyGrant";
 import MyGrantApplications from "./pages/MyGrantApplications";
 import ReceivedGrantApplications from "./pages/ReceivedGrantApplications";
 import EditGrantApplication from "./pages/EditGrantApplication";
+import EquipmentList from "./pages/EquipmentList";
+import MyEquipment from "./pages/MyEquipment";
 
 import {
   ChatSidebarProvider,
@@ -60,6 +62,8 @@ function AppRoutes() {
       <Route path="/grant-applications/mine" element={<MyGrantApplications />} />
       <Route path="/grant-applications/received" element={<ReceivedGrantApplications />} />
       <Route path="/grant-applications/:id/edit" element={<EditGrantApplication />} />
+      <Route path="/equipment" element={<EquipmentList />} />
+      <Route path="/equipment/manage" element={<MyEquipment />} />
     </Routes>
   );
 }
