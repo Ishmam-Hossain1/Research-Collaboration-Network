@@ -136,6 +136,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import milestoneRoutes from "./routes/milestoneRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js"; // ✅ NEW
 import grantApplicationRoutes from "./routes/grantApplicationRoutes.js";
+import equipmentRoutes from "./routes/equipmentRoutes.js";
 import { startReminderJob } from "./jobs/reminderJob.js";
 
 dotenv.config();
@@ -213,6 +214,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/milestones", milestoneRoutes);
 app.use("/api/ai", aiRoutes); // ✅ NEW
 app.use("/api/grant-applications", grantApplicationRoutes);
+app.use("/api/equipment", equipmentRoutes);
 
 
 // Default route

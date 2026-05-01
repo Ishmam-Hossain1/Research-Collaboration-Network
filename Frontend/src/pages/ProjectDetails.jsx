@@ -101,7 +101,7 @@ const ProjectDetails = () => {
         );
       } else {
         const existingIdx = feedbacks.findIndex(
-          (f) => f.user?._id === user._id || f.user === user._id
+          (f) => f.user?._id === user.id || f.user === user.id
         );
 
         if (existingIdx !== -1) {
@@ -634,7 +634,7 @@ const ProjectDetails = () => {
 
                         <div className="flex items-center gap-3">
                           {user &&
-                            (f.user?._id === user._id || f.user === user._id) && (
+                            (f.user?._id === user.id || f.user === user.id) && (
                               <div className="mr-2 flex items-center gap-2">
                                 <button
                                   onClick={() => handleEditFeedback(f)}
