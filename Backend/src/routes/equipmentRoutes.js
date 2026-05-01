@@ -1,5 +1,5 @@
 import express from "express";
-import protect from "../middleware/authMiddleware.js";
+import { protect, optionalProtect } from "../middleware/authMiddleware.js";
 import {
   createEquipment,
   getAllEquipment,
@@ -8,31 +8,54 @@ import {
   updateEquipment,
   deleteEquipment,
   createBooking,
+  getEquipmentBookings,
   getMyBookings,
-  getReceivedBookings,
-  updateBookingStatus,
+  approveBooking,
+  rejectBooking,
   cancelBooking,
-  getUsageHistory,
+  completeBooking,
+  rateBooking,
+  getOwnerBookingsDashboard,
+  getEquipmentUsageHistory,
+  getEquipmentApprovedDates,
 } from "../controllers/equipmentController.js";
 
 const router = express.Router();
 
-// Equipment — static named routes FIRST, then wildcards
-router.get("/", getAllEquipment);
+// ── Equipment CRUD ────────────────────────────────────────────────────────────
+router.get("/", optionalProtect, getAllEquipment);
 router.post("/", protect, createEquipment);
 router.get("/mine", protect, getMyEquipment);
-
-// Bookings — must come before /:id to avoid wildcard capture
-router.post("/bookings/create", protect, createBooking);
+// Owner bookings dashboard (all incoming requests across all owned equipment)
+router.get("/bookings/dashboard", protect, getOwnerBookingsDashboard);
+// Requester: my own requests
 router.get("/bookings/mine", protect, getMyBookings);
-router.get("/bookings/received", protect, getReceivedBookings);
-router.put("/bookings/:id/status", protect, updateBookingStatus);
-router.put("/bookings/:id/cancel", protect, cancelBooking);
 
-// Equipment wildcard routes
-router.get("/:id", getEquipmentById);
+// Compatibility aliases for legacy frontend
+router.get("/bookings/received", protect, getOwnerBookingsDashboard);
+
+router.get("/:id", optionalProtect, getEquipmentById);
 router.put("/:id", protect, updateEquipment);
 router.delete("/:id", protect, deleteEquipment);
-router.get("/:equipmentId/usage-history", protect, getUsageHistory);
+
+// ── Booking lifecycle ─────────────────────────────────────────────────────────
+router.post("/:equipmentId/bookings", protect, createBooking);
+router.get("/:equipmentId/bookings", protect, getEquipmentBookings);
+router.get("/:equipmentId/approved-dates", optionalProtect, getEquipmentApprovedDates);
+router.get("/:equipmentId/usage-history", protect, getEquipmentUsageHistory);
+
+router.put("/bookings/:bookingId/approve", protect, approveBooking);
+router.put("/bookings/:bookingId/reject", protect, rejectBooking);
+router.put("/bookings/:bookingId/cancel", protect, cancelBooking);
+router.put("/bookings/:bookingId/complete", protect, completeBooking);
+router.put("/bookings/:bookingId/rate", protect, rateBooking);
+
+// Compatibility aliases for booking actions
+router.post("/bookings/:bookingId/approve", protect, approveBooking);
+router.post("/bookings/:bookingId/reject", protect, rejectBooking);
+router.post("/bookings/:bookingId/cancel", protect, cancelBooking);
+router.post("/bookings/:bookingId/complete", protect, completeBooking);
+router.post("/bookings/:bookingId/rate", protect, rateBooking);
+router.put("/bookings/:id/status", protect, approveBooking); // Fallback
 
 export default router;

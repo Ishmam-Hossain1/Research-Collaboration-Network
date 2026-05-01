@@ -34,7 +34,6 @@ const Login = () => {
       localStorage.setItem("researchConnectToken", res.data.token);
 
       console.log("LOGIN SUCCESS:", res.data);
-      alert(res.data.message);
 
       navigate("/home");
     } catch (error) {

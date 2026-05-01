@@ -12,31 +12,82 @@ const equipmentBookingSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    owner: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+    startDate: {
+      type: Date,
       required: true,
     },
-    startDate: { type: String, required: true },   // e.g. "2026-05-15"
-    endDate: { type: String, required: true },     // e.g. "2026-05-17"
-    totalDays: { type: Number, required: true, min: 1 },
-    totalCost: { type: Number, required: true },   // in tk
-    purpose: { type: String, trim: true, default: "" },
+    endDate: {
+      type: Date,
+      required: true,
+    },
+    totalDays: { type: Number }, // System compatibility
+    totalCost: { type: Number }, // System compatibility
+    purpose: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    projectName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "cancelled"],
+      enum: ["pending", "approved", "rejected", "cancelled", "completed"],
       default: "pending",
     },
-    paymentStatus: {
+    ownerNotes: {
       type: String,
-      enum: ["pending", "paid"],
-      default: "pending",
+      trim: true,
+      default: "",
     },
-    ownerNote: { type: String, trim: true, default: "" },
-    usageNotes: { type: String, trim: true, default: "" },
+    ownerNote: { type: String, default: "" }, // Legacy compatibility
+    requesterNotes: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    // Usage tracking
+    actualStartDate: { type: Date, default: null },
+    actualEndDate: { type: Date, default: null },
+    usageReport: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    // Rating after use
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null,
+    },
+    reviewComment: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    // Cancellation
+    cancelledBy: {
+      type: String,
+      enum: ["requester", "owner", null],
+      default: null,
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { timestamps: true }
 );
 
-const EquipmentBooking = mongoose.model("EquipmentBooking", equipmentBookingSchema);
+// Prevent overlapping approved bookings for the same equipment
+equipmentBookingSchema.index({ equipment: 1, startDate: 1, endDate: 1 });
+
+const EquipmentBooking = mongoose.model(
+  "EquipmentBooking",
+  equipmentBookingSchema
+);
 export default EquipmentBooking;

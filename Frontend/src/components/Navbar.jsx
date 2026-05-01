@@ -165,7 +165,6 @@ const Navbar = () => {
                 </div>
               )}
             </div>
-            <ChevronDown size={14} className={`text-slate-400 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
           </button>
 
           {showDropdown && (

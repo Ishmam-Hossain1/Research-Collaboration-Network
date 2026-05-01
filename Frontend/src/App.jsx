@@ -24,6 +24,10 @@ import ReceivedGrantApplications from "./pages/ReceivedGrantApplications";
 import EditGrantApplication from "./pages/EditGrantApplication";
 import EquipmentList from "./pages/EquipmentList";
 import MyEquipment from "./pages/MyEquipment";
+import EditEquipment from "./pages/EditEquipment";
+import EquipmentBookings from "./pages/EquipmentBookings";
+import EquipmentDetail from "./pages/EquipmentDetail";
+import ListEquipment from "./pages/ListEquipment";
 
 import {
   ChatSidebarProvider,
@@ -63,7 +67,11 @@ function AppRoutes() {
       <Route path="/grant-applications/received" element={<ReceivedGrantApplications />} />
       <Route path="/grant-applications/:id/edit" element={<EditGrantApplication />} />
       <Route path="/equipment" element={<EquipmentList />} />
+      <Route path="/equipment/new" element={<ListEquipment />} />
       <Route path="/equipment/manage" element={<MyEquipment />} />
+      <Route path="/equipment/edit/:id" element={<EditEquipment />} />
+      <Route path="/equipment/my-bookings" element={<EquipmentBookings />} />
+      <Route path="/equipment/:id" element={<EquipmentDetail />} />
     </Routes>
   );
 }
