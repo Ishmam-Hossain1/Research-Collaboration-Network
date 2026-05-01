@@ -5,117 +5,149 @@ import Equipment from './src/models/Equipment.js';
 
 dotenv.config();
 
-const EQUIPMENT_DATA = [
+const ADDITIONAL_EQUIPMENT = [
   {
-    name: 'Confocal Laser Scanning Microscope',
+    name: 'Scanning Electron Microscope (SEM)',
     category: 'Microscopy',
-    description: 'High-resolution imaging for biological samples.',
-    pricePerDay: 5,
-    condition: 'Excellent',
-    location: 'Main Science Building, Room 101'
+    description: 'Provides high-resolution images of a sample surface by scanning it with a focused beam of electrons.',
+    rentalPricePerDay: 5,
+    condition: 'excellent',
+    location: 'Nanotechnology Center, Wing B',
+    tags: ['electron', 'imaging', 'nano'],
+    isFree: false
   },
   {
-    name: 'Nuclear Magnetic Resonance (NMR) Spectrometer',
+    name: 'Mass Spectrometer (LC-MS)',
     category: 'Spectroscopy',
-    description: 'Used for determining the structure of organic compounds.',
-    pricePerDay: 4,
-    condition: 'Good',
-    location: 'Chemistry Dept, Room 302'
+    description: 'Analytical technique that ionizes chemical species and sorts the ions based on their mass-to-charge ratio.',
+    rentalPricePerDay: 4,
+    condition: 'good',
+    location: 'Analytical Chemistry Lab, 4th Floor',
+    tags: ['mass spec', 'chemistry', 'analytical'],
+    isFree: false
   },
   {
-    name: 'High-Performance Liquid Chromatography (HPLC)',
-    category: 'Chromatography',
-    description: 'Separates, identifies, and quantifies components in a mixture.',
-    pricePerDay: 3,
-    condition: 'Fair',
-    location: 'Analytical Lab 2'
+    name: 'Flow Cytometer',
+    category: 'Biology',
+    description: 'Laser-based technique used to detect and measure physical and chemical characteristics of a population of cells or particles.',
+    rentalPricePerDay: 3,
+    condition: 'excellent',
+    location: 'Biomedical Research Bldg, Room 202',
+    tags: ['cells', 'biology', 'laser'],
+    isFree: false
   },
   {
-    name: 'Differential Scanning Calorimeter',
-    category: 'Thermal Analysis',
-    description: 'Measures temperatures and heat flows associated with thermal transitions.',
-    pricePerDay: 2,
-    condition: 'Good',
-    location: 'Physics Wing, Room 405'
+    name: 'DNA Sequencer (Next-Gen)',
+    category: 'Biology',
+    description: 'Used to determine the order of the four bases: adenine, guanine, cytosine, and thymine in a strand of DNA.',
+    rentalPricePerDay: 5,
+    condition: 'excellent',
+    location: 'Genomics Hub',
+    tags: ['dna', 'genetics', 'sequencing'],
+    isFree: false
   },
   {
-    name: 'High-Performance Computing Cluster node',
-    category: 'Computing & Data',
-    description: 'Access to 128-core node with 512GB RAM for heavy simulations.',
-    pricePerDay: 5,
-    condition: 'Excellent',
-    location: 'Data Center'
+    name: 'Oscilloscope 500MHz',
+    category: 'Electronics',
+    description: 'Type of electronic test instrument that graphically displays varying signal voltages.',
+    rentalPricePerDay: 2,
+    condition: 'good',
+    location: 'EE Lab 10',
+    tags: ['electronics', 'signal', 'testing'],
+    isFree: false
   },
   {
-    name: 'PCR Thermal Cycler',
-    category: 'Molecular Biology',
-    description: 'Used to amplify segments of DNA via the polymerase chain reaction.',
-    pricePerDay: 1,
-    condition: 'Good',
-    location: 'Genetics Lab, Room 220'
+    name: '3D Bioprinter',
+    category: 'Other',
+    description: 'Utilizes 3D printing techniques to combine cells, growth factors, and biomaterials to fabricate biomedical parts.',
+    rentalPricePerDay: 4,
+    condition: 'excellent',
+    location: 'Additive Manufacturing Lab',
+    tags: ['3d printing', 'biomedical', 'fabrication'],
+    isFree: false
   },
   {
-    name: 'Rotary Evaporator',
-    category: 'Chemistry',
-    description: 'Efficient and gentle removal of solvents from samples by evaporation.',
-    pricePerDay: 2,
-    condition: 'Fair',
-    location: 'Organic Chem Lab'
+    name: 'Supercomputing Node (V100 GPU)',
+    category: 'Computing',
+    description: 'Access to a high-performance compute node with NVIDIA V100 GPU for AI and deep learning research.',
+    rentalPricePerDay: 1,
+    condition: 'excellent',
+    location: 'Virtual / Server Room 1',
+    tags: ['gpu', 'ai', 'hpc'],
+    isFree: false
   },
   {
-    name: 'X-Ray Diffractometer',
+    name: 'Ultrafast Laser System',
     category: 'Physics',
-    description: 'Non-destructive analytical technique for analyzing material structure.',
-    pricePerDay: 4,
-    condition: 'Excellent',
-    location: 'Materials Science Bldg'
+    description: 'Generates ultrashort pulses of light, typically in the femtosecond range.',
+    rentalPricePerDay: 5,
+    condition: 'fair',
+    location: 'Optics Lab, Basement',
+    tags: ['laser', 'physics', 'optics'],
+    isFree: false
+  },
+  {
+    name: 'Cleanroom Access (Class 1000)',
+    category: 'Other',
+    description: 'Controlled environment that has a low level of pollutants such as dust, airborne microbes, aerosol particles, and chemical vapors.',
+    rentalPricePerDay: 5,
+    condition: 'excellent',
+    location: 'Cleanroom Complex',
+    tags: ['cleanroom', 'fabrication', 'semiconductor'],
+    isFree: false
+  },
+  {
+    name: 'Centrifuge (Ultra-speed)',
+    category: 'Biology',
+    description: 'Specialized centrifuge optimized for spinning samples at exceptionally high speeds.',
+    rentalPricePerDay: 1,
+    condition: 'good',
+    location: 'Biology Shared Lab',
+    tags: ['centrifuge', 'lab', 'biology'],
+    isFree: false
   }
 ];
 
 const run = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
+    console.log('Connected to MongoDB');
+
     const users = await User.find({});
-    
-    if (users.length === 0) {
-      console.log('No users found in database');
-      process.exit(0);
+    if (users.length < 2) {
+      console.log('Need at least 2 users in the database to assign equipment to different users.');
+      process.exit(1);
     }
 
-    let equipmentAdded = 0;
-    
-    // Assign 1-2 random equipment pieces to each user
-    for (const user of users) {
-      const numToAdd = Math.floor(Math.random() * 2) + 1; // 1 or 2
-      
-      for (let i=0; i<numToAdd; i++) {
-        const randomEq = EQUIPMENT_DATA[Math.floor(Math.random() * EQUIPMENT_DATA.length)];
-        
-        await Equipment.create({
-          name: randomEq.name,
-          category: randomEq.category,
-          description: randomEq.description,
-          pricePerDay: randomEq.pricePerDay,
-          condition: randomEq.condition,
-          location: randomEq.location,
-          owner: user._id,
-          availabilitySchedule: [
-            {dayOfWeek:"Monday",startTime:"09:00",endTime:"17:00",isAvailable:true},
-            {dayOfWeek:"Tuesday",startTime:"09:00",endTime:"17:00",isAvailable:true},
-            {dayOfWeek:"Wednesday",startTime:"09:00",endTime:"17:00",isAvailable:true},
-            {dayOfWeek:"Thursday",startTime:"09:00",endTime:"17:00",isAvailable:true},
-            {dayOfWeek:"Friday",startTime:"09:00",endTime:"17:00",isAvailable:true}
-          ],
-          isActive: true
-        });
-        equipmentAdded++;
-      }
+    console.log(`Found ${users.length} users. Distributing ${ADDITIONAL_EQUIPMENT.length} equipment items...`);
+
+    let addedCount = 0;
+    for (let i = 0; i < ADDITIONAL_EQUIPMENT.length; i++) {
+      const eqData = ADDITIONAL_EQUIPMENT[i];
+      // Cycle through users to ensure different owners
+      const owner = users[i % users.length];
+
+      await Equipment.create({
+        ...eqData,
+        owner: owner._id,
+        availabilitySchedule: [
+          { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" },
+          { dayOfWeek: 2, startTime: "09:00", endTime: "17:00" },
+          { dayOfWeek: 3, startTime: "09:00", endTime: "17:00" },
+          { dayOfWeek: 4, startTime: "09:00", endTime: "17:00" },
+          { dayOfWeek: 5, startTime: "09:00", endTime: "17:00" }
+        ],
+        maxBookingDays: Math.floor(Math.random() * 14) + 3,
+        requiresTraining: Math.random() > 0.5,
+        isActive: true
+      });
+      addedCount++;
     }
-    
-    console.log(`Successfully seeded ${equipmentAdded} new equipment items!`);
-    process.exit(0);
-  } catch (e) {
-    console.error("Error seeding equipment:", e);
+
+    console.log(`Successfully added ${addedCount} equipment items!`);
+    mongoose.connection.close();
+  } catch (err) {
+    console.error('Error seeding equipment:', err);
     process.exit(1);
   }
 };
