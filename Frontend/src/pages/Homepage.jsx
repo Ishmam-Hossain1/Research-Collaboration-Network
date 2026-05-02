@@ -1,13 +1,23 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import SplashCursor from "../components/SplashCursor";
+
+import resourcesImage from "../assets/janko-ferlic-sfL_QOnmy00-unsplash.jpg";
+import bgImageTwo from "../assets/hitoshi-suzuki-1COcTd3pRCg-unsplash.jpg";
+import bgImageThree from "../assets/tim-wildsmith-o2fc-C-Uotw-unsplash.jpg";
+import globalNetworkImg from "../assets/international-day-education-futuristic-style.jpg";
+import collabRoom from "../assets/2205_w037_n003_379b_p1_379.jpg";
+
 import {
   motion,
   useInView,
   useScroll,
   useTransform,
   useMotionValueEvent,
+  useReducedMotion,
 } from "framer-motion";
+
 import {
   ArrowRight,
   FlaskConical,
@@ -18,39 +28,58 @@ import {
   Globe,
   ShieldCheck,
   BarChart3,
+  BookOpen,
+  Handshake,
+  Bot,
 } from "lucide-react";
+
+const heroSlideshowImages = [resourcesImage, bgImageTwo, bgImageThree];
 
 const features = [
   {
-    title: "Find Collaborators",
+    title: "Find Research Collaborators",
     description:
-      "Connect with researchers across disciplines and build strong academic partnerships.",
+      "Discover researchers with matching interests, skills, and academic goals, then send collaboration requests directly.",
     icon: Users,
   },
   {
-    title: "Showcase Projects",
+    title: "Manage Research Projects",
     description:
-      "Present your ongoing and completed research with clean project profiles.",
+      "Create projects, define objectives, add keywords, track progress, and organize your research work in one place.",
     icon: FolderKanban,
   },
   {
-    title: "Share Datasets",
+    title: "Share Research Datasets",
     description:
-      "Upload and organize datasets for discovery, reuse, and academic impact.",
+      "Upload datasets with public, private, or restricted access so research data can be shared safely.",
     icon: Database,
   },
 ];
 
 const heroStats = [
-  { label: "Active users", value: 50567 },
-  { label: "Research links", value: 70867 },
+  { label: "Research tools", value: 1971 },
+  { label: "Platform features", value: 16 },
 ];
 
-const dashboardStats = [
-  { label: "Researchers", value: 2400 },
-  { label: "Projects", value: 850 },
-  { label: "Datasets", value: 310 },
-  { label: "Collaborations", value: 1200 },
+const visualShowcase = [
+  {
+    title: "Collaborative Research Rooms",
+    description:
+      "Bring supervisors, students, and collaborators into one focused workspace.",
+    image: collabRoom,
+  },
+  {
+    title: "Data-Driven Discovery",
+    description:
+      "Explore datasets and insights with clarity across every stage of your project.",
+    image: resourcesImage,
+  },
+  {
+    title: "Global Academic Network",
+    description:
+      "Connect with institutions and experts through a polished collaboration layer.",
+    image: globalNetworkImg,
+  },
 ];
 
 const fadeUpVariant = {
@@ -81,6 +110,17 @@ function formatCompactPlus(value) {
     return `${Number.isInteger(compact) ? compact : compact.toFixed(1)}K+`;
   }
   return `${value}+`;
+}
+
+function getArrayFromResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.projects)) return data.projects;
+  if (Array.isArray(data?.users)) return data.users;
+  if (Array.isArray(data?.researchers)) return data.researchers;
+  if (Array.isArray(data?.datasets)) return data.datasets;
+  if (Array.isArray(data?.resources)) return data.resources;
+  return [];
 }
 
 function CountUp({ end, duration = 1800, formatter, className = "" }) {
@@ -129,54 +169,161 @@ function CountUp({ end, duration = 1800, formatter, className = "" }) {
 }
 
 export default function Homepage() {
+  const navigate = useNavigate();
+  const featuresRef = useRef(null);
+  const footerRef = useRef(null);
+  const prefersReducedMotion = useReducedMotion();
+
   const { scrollY } = useScroll();
   const [showNavbar, setShowNavbar] = useState(true);
+  const showNavbarRef = useRef(true);
+  const [isLowPowerDevice, setIsLowPowerDevice] = useState(false);
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
 
-  const heroScale = useTransform(scrollY, [0, 280], [1, 0.94]);
-  const heroY = useTransform(scrollY, [0, 280], [0, -40]);
-  const heroOpacity = useTransform(scrollY, [0, 320], [1, 0.92]);
+  const [counts, setCounts] = useState({
+    projects: 0,
+    researchers: 0,
+    datasets: 0,
+    resources: 0,
+  });
+
+  const dashboardStats = [
+    { label: "Projects", value: counts.projects },
+    { label: "Researchers", value: counts.researchers },
+    { label: "Datasets", value: counts.datasets },
+    { label: "Resources", value: counts.resources },
+  ];
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+
+    const updateDeviceMode = () => {
+      setIsLowPowerDevice(mediaQuery.matches);
+    };
+
+    updateDeviceMode();
+    mediaQuery.addEventListener("change", updateDeviceMode);
+
+    return () => mediaQuery.removeEventListener("change", updateDeviceMode);
+  }, []);
+
+  const smoothMode = prefersReducedMotion || isLowPowerDevice;
+
+  useEffect(() => {
+    if (prefersReducedMotion || heroSlideshowImages.length <= 1) return;
+
+    const intervalMs = smoothMode ? 9000 : 6500;
+
+    const id = window.setInterval(() => {
+      setHeroSlideIndex((i) => (i + 1) % heroSlideshowImages.length);
+    }, intervalMs);
+
+    return () => window.clearInterval(id);
+  }, [prefersReducedMotion, smoothMode]);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [projectsRes, usersRes, datasetsRes, resourcesRes] =
+          await Promise.allSettled([
+            fetch("http://localhost:5000/api/projects"),
+            fetch("http://localhost:5000/api/users"),
+            fetch("http://localhost:5000/api/datasets"),
+            fetch("http://localhost:5000/api/resources"),
+          ]);
+
+        let projectsCount = 0;
+        let researchersCount = 0;
+        let datasetsCount = 0;
+        let resourcesCount = 0;
+
+        if (projectsRes.status === "fulfilled" && projectsRes.value.ok) {
+          const projectsData = await projectsRes.value.json();
+          projectsCount = getArrayFromResponse(projectsData).length;
+        }
+
+        if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+          const usersData = await usersRes.value.json();
+          researchersCount = getArrayFromResponse(usersData).length;
+        }
+
+        if (datasetsRes.status === "fulfilled" && datasetsRes.value.ok) {
+          const datasetsData = await datasetsRes.value.json();
+          datasetsCount = getArrayFromResponse(datasetsData).length;
+        }
+
+        if (resourcesRes.status === "fulfilled" && resourcesRes.value.ok) {
+          const resourcesData = await resourcesRes.value.json();
+          resourcesCount = getArrayFromResponse(resourcesData).length;
+        }
+
+        setCounts({
+          projects: projectsCount,
+          researchers: researchersCount,
+          datasets: datasetsCount,
+          resources: resourcesCount,
+        });
+      } catch (err) {
+        console.error("Error fetching homepage counts:", err);
+      }
+    };
+
+    fetchCounts();
+  }, []);
+
+  const heroScale = useTransform(scrollY, [0, 280], [1, smoothMode ? 0.99 : 0.96]);
+  const heroY = useTransform(scrollY, [0, 280], [0, smoothMode ? -10 : -28]);
+  const heroOpacity = useTransform(scrollY, [0, 320], [1, smoothMode ? 0.98 : 0.94]);
+  const heroImageY = useTransform(scrollY, [0, 600], [0, smoothMode ? -36 : -100]);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() ?? 0;
     const diff = latest - previous;
 
-    // keep navbar visible near the top
     if (latest <= 24) {
-      setShowNavbar(true);
+      if (!showNavbarRef.current) {
+        showNavbarRef.current = true;
+        setShowNavbar(true);
+      }
       return;
     }
 
-    // ignore tiny scroll jitters for smoother behavior
-    if (Math.abs(diff) < 6) return;
+    if (Math.abs(diff) < 10) return;
 
-    if (diff > 0) {
-      setShowNavbar(false);
-    } else {
-      setShowNavbar(true);
+    const nextNavbarState = diff <= 0;
+
+    if (nextNavbarState !== showNavbarRef.current) {
+      showNavbarRef.current = nextNavbarState;
+      setShowNavbar(nextNavbarState);
     }
   });
 
+  const scrollToFeatures = () => {
+    featuresRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollToFooter = () => {
+    footerRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f8fbff] text-slate-900">
-      {/* Splash cursor background */}
-      <div className="absolute inset-0 z-0">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#f8fbff] text-slate-900">
+      <div className="absolute inset-0 z-[1]">
         <SplashCursor
-          SIM_RESOLUTION={128}
-          DYE_RESOLUTION={1440}
-          DENSITY_DISSIPATION={3.5}
-          VELOCITY_DISSIPATION={2}
+          SIM_RESOLUTION={smoothMode ? 64 : 128}
+          DYE_RESOLUTION={smoothMode ? 768 : 1440}
+          DENSITY_DISSIPATION={smoothMode ? 4.2 : 3.5}
+          VELOCITY_DISSIPATION={smoothMode ? 2.8 : 2}
           PRESSURE={0.1}
-          CURL={3}
-          SPLAT_RADIUS={0.2}
-          SPLAT_FORCE={6000}
-          COLOR_UPDATE_SPEED={10}
+          CURL={smoothMode ? 2 : 3}
+          SPLAT_RADIUS={smoothMode ? 0.16 : 0.2}
+          SPLAT_FORCE={smoothMode ? 4200 : 6000}
+          COLOR_UPDATE_SPEED={smoothMode ? 7 : 10}
         />
       </div>
 
-      {/* Soft overlay for readability */}
-      <div className="absolute inset-0 z-[2] bg-white/60 backdrop-blur-[1px]" />
+      <div className="absolute inset-0 z-[2] bg-white/35 backdrop-blur-[0.5px]" />
 
-      {/* Main content */}
       <div className="relative z-10">
         <motion.div
           className="fixed left-0 right-0 top-0 z-50 will-change-transform"
@@ -185,251 +332,412 @@ export default function Homepage() {
             y: showNavbar ? 0 : -110,
             opacity: showNavbar ? 1 : 0.92,
           }}
-          transition={{
-            type: "spring",
-            stiffness: 260,
-            damping: 28,
-            mass: 0.8,
-          }}
+          transition={
+            smoothMode
+              ? { type: "tween", ease: "easeOut", duration: 0.22 }
+              : {
+                  type: "spring",
+                  stiffness: 260,
+                  damping: 28,
+                  mass: 0.8,
+                }
+          }
         >
           <Navbar />
         </motion.div>
 
         <main className="relative overflow-hidden pt-[78px]">
-          <div className="pointer-events-none absolute -right-24 top-10 h-80 w-80 rounded-full bg-blue-400/15 blur-3xl" />
-          <div className="pointer-events-none absolute -left-16 top-[28rem] h-72 w-72 rounded-full bg-indigo-400/10 blur-3xl" />
-
-          <motion.section
-            style={{ scale: heroScale, y: heroY, opacity: heroOpacity }}
-            className="origin-top mx-auto max-w-7xl px-6 py-16 md:px-10 md:py-24"
-            variants={fadeUpVariant}
-            initial="hidden"
-            animate="visible"
-          >
-            <div className="grid items-center gap-12 lg:grid-cols-2">
-              <motion.div variants={fadeUpVariant}>
-                <div className="mb-5 inline-flex rounded-full bg-blue-50 px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
-                  Research Collaboration Platform
-                </div>
-
-                <h1 className="max-w-3xl text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
-                  Discover. Collaborate. Publish.
-                  <span className="text-blue-600">
-                    {" "}
-                    Powered by Research Connect.
-                  </span>
-                </h1>
-
-                <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
-                  Build meaningful academic partnerships, showcase your
-                  projects, and share datasets in a modern platform designed
-                  for researchers, students, and institutions.
-                </p>
-
-                <div className="mt-8 flex flex-wrap gap-4">
-                  <button className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-300/40 transition hover:-translate-y-0.5 hover:bg-slate-800">
-                    Get Started
-                    <ArrowRight size={18} />
-                  </button>
-
-                  <button className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                    Learn More
-                  </button>
-                </div>
-
-                <div className="mt-10 flex items-center gap-6">
-                  <div className="flex -space-x-3">
-                    {["AR", "MK", "SN", "JL"].map((item) => (
-                      <div
-                        key={item}
-                        className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-sm font-semibold text-slate-700 shadow-sm"
-                      >
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="max-w-sm text-sm text-slate-600">
-                    Trusted by researchers, students, and academic teams
-                  </p>
-                </div>
-
-                <div className="mt-10 flex flex-wrap gap-8">
-                  {heroStats.map((item) => (
-                    <div key={item.label}>
-                      <div className="text-3xl font-extrabold text-slate-900">
-                        <CountUp
-                          end={item.value}
-                          duration={1800}
-                          formatter={(value) =>
-                            Math.round(value).toLocaleString()
-                          }
-                        />
-                      </div>
-                      <div className="text-sm text-slate-500">{item.label}</div>
-                    </div>
+          <div className="relative w-full">
+            <section className="relative w-full overflow-hidden">
+              <motion.div
+                className="pointer-events-none absolute inset-0 h-[115%] w-full will-change-transform"
+                style={{ y: heroImageY }}
+                aria-hidden
+              >
+                <div className="relative h-full w-full">
+                  {heroSlideshowImages.map((src, index) => (
+                    <img
+                      key={src}
+                      src={src}
+                      alt=""
+                      loading={index === 0 ? "eager" : "lazy"}
+                      className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-[1400ms] ease-in-out ${
+                        index === heroSlideIndex
+                          ? "z-[1] opacity-100"
+                          : "z-0 opacity-0"
+                      }`}
+                    />
                   ))}
                 </div>
               </motion.div>
 
-              <motion.div className="relative" variants={fadeUpVariant}>
-                <div className="rounded-[32px] border border-slate-200/80 bg-white/85 p-6 shadow-2xl shadow-slate-200/50 backdrop-blur-md">
-                  <div className="mb-5 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                        Live Workspace
-                      </p>
-                      <h3 className="mt-1 text-2xl font-bold text-slate-900">
-                        Research Connect Dashboard
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        A unified place for people, projects, and research data.
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/65 to-slate-900/35" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/50 to-transparent" />
+
+              <div className="relative z-10 mx-auto flex max-w-7xl items-center px-4 py-10 sm:px-6 sm:py-14 md:px-10 md:py-16">
+                <motion.div
+                  style={{ scale: heroScale, y: heroY, opacity: heroOpacity }}
+                  className="grid w-full origin-top items-center gap-10 lg:grid-cols-2 lg:gap-12"
+                  variants={fadeUpVariant}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.div variants={fadeUpVariant} className="max-w-2xl">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
+                      Research Collaboration Platform
+                    </p>
+
+                    <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl">
+                      Discover. Collaborate. Publish.
+                    </h1>
+
+                    <p className="mt-2 font-serif text-lg text-blue-100/90 sm:text-xl">
+                      Powered by Research Connect
+                    </p>
+
+                    <p className="mt-5 max-w-xl text-sm leading-7 text-slate-200 sm:text-base">
+                      Build meaningful academic partnerships, manage projects and
+                      milestones, share datasets, find funding, and get AI-guided
+                      support in one modern workspace.
+                    </p>
+
+                    <div className="mt-8 flex flex-wrap gap-4">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/signup")}
+                        className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 transition hover:bg-blue-500"
+                      >
+                        Get started
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={scrollToFeatures}
+                        className="rounded-md border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15"
+                      >
+                        Explore features
+                      </button>
+                    </div>
+
+                    <div className="mt-10 flex flex-wrap items-center gap-6 text-white/95">
+                      <div className="flex -space-x-3">
+                        {["AI", "DS", "ML", "RC"].map((item) => (
+                          <div
+                            key={item}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-900 bg-slate-200 text-xs font-bold text-slate-800"
+                          >
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="max-w-xs text-sm text-slate-200">
+                        For researchers, students, supervisors, and institutions.
                       </p>
                     </div>
-                    <Sparkles className="text-blue-600" size={20} />
+
+                    <div className="mt-8 flex flex-wrap gap-8 border-t border-white/15 pt-8">
+                      {heroStats.map((item) => (
+                        <div key={item.label}>
+                          <div className="text-2xl font-bold text-white sm:text-3xl">
+                            <CountUp
+                              end={item.value}
+                              duration={1800}
+                              formatter={(value) =>
+                                Math.round(value).toLocaleString()
+                              }
+                            />
+                          </div>
+                          <div className="text-sm text-slate-300">
+                            {item.label}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  <motion.div className="relative" variants={fadeUpVariant}>
+                    <div className="rounded-[28px] border border-white/70 bg-white/85 p-4 shadow-2xl shadow-slate-300/40 backdrop-blur-xl sm:rounded-[32px] sm:p-6">
+                      <div className="mb-5 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                            Live Workspace
+                          </p>
+                          <h3 className="mt-1 text-2xl font-bold text-slate-900">
+                            Research Connect Dashboard
+                          </h3>
+                          <p className="mt-1 text-sm text-slate-500">
+                            One place for people, projects, data, and progress.
+                          </p>
+                        </div>
+
+                        <Sparkles className="shrink-0 text-blue-600" size={22} />
+                      </div>
+
+                      <motion.div
+                        className="grid gap-4 sm:grid-cols-2"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, amount: 0.25 }}
+                      >
+                        <motion.div
+                          variants={fadeUpVariant}
+                          className="rounded-2xl border border-slate-200/80 bg-slate-50/85 p-4"
+                        >
+                          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <FlaskConical className="h-4 w-4 text-blue-600" />
+                            Active Projects
+                          </div>
+                          <p className="text-sm leading-6 text-slate-600">
+                            Create, organize, and monitor research projects with
+                            clear objectives and progress tracking.
+                          </p>
+                        </motion.div>
+
+                        <motion.div
+                          variants={fadeUpVariant}
+                          className="rounded-2xl border border-slate-200/80 bg-slate-50/85 p-4"
+                        >
+                          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <Handshake className="h-4 w-4 text-blue-600" />
+                            Collaboration
+                          </div>
+                          <p className="text-sm leading-6 text-slate-600">
+                            Find researchers with shared interests and manage
+                            collaboration requests smoothly.
+                          </p>
+                        </motion.div>
+
+                        <motion.div
+                          variants={fadeUpVariant}
+                          className="rounded-2xl border border-slate-200/80 bg-slate-50/85 p-4"
+                        >
+                          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <ShieldCheck className="h-4 w-4 text-blue-600" />
+                            Dataset Access
+                          </div>
+                          <p className="text-sm leading-6 text-slate-600">
+                            Upload research datasets and control visibility with
+                            public, private, or restricted access.
+                          </p>
+                        </motion.div>
+
+                        <motion.div
+                          variants={fadeUpVariant}
+                          className="rounded-2xl border border-slate-200/80 bg-slate-50/85 p-4"
+                        >
+                          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                            <Bot className="h-4 w-4 text-blue-600" />
+                            AI Assistant
+                          </div>
+                          <p className="text-sm leading-6 text-slate-600">
+                            Get contextual guidance about projects, milestones,
+                            datasets, funding, and platform usage.
+                          </p>
+                        </motion.div>
+                      </motion.div>
+
+                      <div className="my-5 h-px w-full bg-slate-200" />
+
+                      <motion.div
+                        className="grid grid-cols-2 gap-4"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, amount: 0.25 }}
+                      >
+                        {dashboardStats.map((item) => (
+                          <motion.div
+                            key={item.label}
+                            variants={fadeUpVariant}
+                            className="rounded-2xl border border-slate-200 bg-white/90 p-4"
+                          >
+                            <div className="text-2xl font-bold text-slate-900">
+                              <CountUp
+                                end={item.value}
+                                duration={1800}
+                                formatter={(value) =>
+                                  formatCompactPlus(Math.round(value))
+                                }
+                              />
+                            </div>
+                            <div className="mt-1 text-sm text-slate-500">
+                              {item.label}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    </div>
+
+                    <div className="absolute -right-6 -top-6 hidden rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg backdrop-blur-md md:block">
+                      Real-time Messaging
+                    </div>
+
+                    <div className="absolute -bottom-5 -left-6 hidden rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg backdrop-blur-md md:block">
+                      Milestone Tracking
+                    </div>
+                  </motion.div>
+                </motion.div>
+              </div>
+            </section>
+          </div>
+
+          <motion.section
+            className="border-t border-slate-200/80 bg-white py-14 sm:py-20"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10">
+              <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
+                <motion.div
+                  variants={fadeUpVariant}
+                  className="relative overflow-hidden rounded-2xl shadow-lg shadow-slate-200/50"
+                >
+                  <img
+                    src={bgImageTwo}
+                    alt="Research collaboration"
+                    className="aspect-[4/3] w-full object-cover sm:aspect-[5/4]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-transparent" />
+                </motion.div>
+
+                <motion.div variants={fadeUpVariant} className="text-left">
+                  <p className="text-sm font-medium italic text-blue-600">
+                    Why Research Connect
+                  </p>
+
+                  <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+                    About the platform
+                  </h2>
+
+                  <div className="mt-4 flex max-w-sm items-center gap-2">
+                    <div className="h-px flex-1 bg-blue-200" />
+                    <div className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+                    <div className="h-px flex-1 bg-blue-200" />
                   </div>
 
-                  <motion.div
-                    className="grid gap-4 sm:grid-cols-2"
-                    variants={staggerContainer}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, amount: 0.25 }}
+                  <p className="mt-5 text-sm leading-7 text-slate-600 sm:text-base">
+                    Research Connect brings people, projects, and data together
+                    in a single workspace. Whether you are forming a new team,
+                    sharing a dataset, or tracking milestones, the experience
+                    stays clear and calm—like a well-run lab notebook, but
+                    online.
+                  </p>
+
+                  <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+                    We built it for the full academic workflow: discovery,
+                    collaboration, secure sharing, and insight—without losing the
+                    human side of research.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={scrollToFooter}
+                    className="mt-6 rounded-md bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
                   >
-                    <motion.div
-                      variants={fadeUpVariant}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                        <FlaskConical className="h-4 w-4 text-blue-600" />
-                        Active Project
-                      </div>
-                      <p className="text-sm leading-6 text-slate-600">
-                        AI-driven disease prediction using multimodal clinical
-                        data and collaborative review workflows.
-                      </p>
-                    </motion.div>
-
-                    <motion.div
-                      variants={fadeUpVariant}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                        <Globe className="h-4 w-4 text-blue-600" />
-                        New Collaboration
-                      </div>
-                      <p className="text-sm leading-6 text-slate-600">
-                        3 new researcher matches from health informatics and
-                        data science.
-                      </p>
-                    </motion.div>
-
-                    <motion.div
-                      variants={fadeUpVariant}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                        <ShieldCheck className="h-4 w-4 text-blue-600" />
-                        Verified Dataset
-                      </div>
-                      <p className="text-sm leading-6 text-slate-600">
-                        Securely manage datasets and publish reusable research
-                        assets.
-                      </p>
-                    </motion.div>
-
-                    <motion.div
-                      variants={fadeUpVariant}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                    >
-                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                        <BarChart3 className="h-4 w-4 text-blue-600" />
-                        Analytics
-                      </div>
-                      <p className="text-sm leading-6 text-slate-600">
-                        Track engagement, project growth, and collaboration
-                        activity.
-                      </p>
-                    </motion.div>
-                  </motion.div>
-
-                  <div className="my-5 h-px w-full bg-slate-200" />
-
-                  <motion.div
-                    className="grid grid-cols-2 gap-4"
-                    variants={staggerContainer}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, amount: 0.25 }}
-                  >
-                    {dashboardStats.map((item) => (
-                      <motion.div
-                        key={item.label}
-                        variants={fadeUpVariant}
-                        className="rounded-2xl border border-slate-200 bg-white p-4"
-                      >
-                        <div className="text-2xl font-bold text-slate-900">
-                          <CountUp
-                            end={item.value}
-                            duration={1800}
-                            formatter={(value) =>
-                              formatCompactPlus(Math.round(value))
-                            }
-                          />
-                        </div>
-                        <div className="mt-1 text-sm text-slate-500">
-                          {item.label}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                </div>
-
-                <div className="absolute -right-6 -top-6 hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg md:block">
-                  Real-time Insights
-                </div>
-
-                <div className="absolute -bottom-5 -left-6 hidden rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg md:block">
-                  Seamless Collaboration
-                </div>
-              </motion.div>
+                    Get in touch
+                  </button>
+                </motion.div>
+              </div>
             </div>
           </motion.section>
 
           <motion.section
-            className="mx-auto max-w-7xl px-6 pb-8 md:px-10"
+            className="mx-auto max-w-7xl bg-[#f8fbff] px-4 py-10 sm:px-6 md:px-10"
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
           >
             <motion.p
-              className="mb-5 text-center text-sm text-slate-500"
+              className="mb-5 text-center text-sm font-medium text-slate-500"
               variants={fadeUpVariant}
             >
-              Adopted by renowned institutions
+              Built around the complete research workflow
             </motion.p>
 
             <motion.div
-              className="grid gap-4 md:grid-cols-5"
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
               variants={staggerContainer}
             >
-              {["MIT", "Stanford", "Oxford", "Cambridge", "ETH Zurich"].map(
-                (item) => (
-                  <motion.div
-                    key={item}
-                    variants={fadeUpVariant}
-                    className="flex min-h-[72px] items-center justify-center rounded-2xl border border-slate-200 bg-white/80 font-semibold text-slate-600 backdrop-blur-sm"
-                  >
-                    {item}
-                  </motion.div>
-                )
-              )}
+              {[
+                "Projects",
+                "Researchers",
+                "Datasets",
+                "Funding",
+                "Resources",
+              ].map((item) => (
+                <motion.div
+                  key={item}
+                  variants={fadeUpVariant}
+                  className="flex min-h-[72px] items-center justify-center rounded-md border border-slate-200 bg-white font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+                >
+                  {item}
+                </motion.div>
+              ))}
             </motion.div>
           </motion.section>
 
           <motion.section
-            className="mx-auto max-w-7xl px-6 pb-20 pt-10 md:px-10"
+            className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 md:px-10"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.15 }}
+          >
+            <motion.div
+              className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end"
+              variants={fadeUpVariant}
+            >
+              <div className="max-w-2xl">
+                <p className="text-sm font-medium italic text-blue-600">
+                  Visual research story
+                </p>
+                <h2 className="mt-2 font-serif text-2xl font-semibold text-slate-900 sm:text-3xl">
+                  Academic, modern, and alive
+                </h2>
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="grid gap-5 md:grid-cols-3"
+              variants={staggerContainer}
+            >
+              {visualShowcase.map((card) => (
+                <motion.article
+                  key={card.title}
+                  variants={fadeUpVariant}
+                  className="overflow-hidden rounded-[26px] border border-white/80 bg-white/75 shadow-lg shadow-slate-200/60 backdrop-blur-xl transition-all hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <div className="relative h-52 sm:h-56">
+                    <img
+                      src={card.image}
+                      alt={card.title}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/25 to-transparent" />
+                  </div>
+
+                  <div className="p-5">
+                    <h3 className="font-serif text-lg font-semibold text-slate-900">
+                      {card.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">
+                      {card.description}
+                    </p>
+                  </div>
+                </motion.article>
+              ))}
+            </motion.div>
+          </motion.section>
+
+          <motion.section
+            ref={featuresRef}
+            className="mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-6 md:px-10 md:pt-10"
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
@@ -440,14 +748,17 @@ export default function Homepage() {
               variants={fadeUpVariant}
             >
               <div className="mb-3 text-sm font-semibold text-blue-600">
-                Comprehensive Insights
+                Comprehensive Workspace
               </div>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
-                Everything needed for modern research workflows
+
+              <h2 className="font-serif text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
+                Everything you need to collaborate
               </h2>
+
               <p className="mt-4 text-base leading-8 text-slate-600">
-                Manage projects, people, and datasets through a clean platform
-                inspired by modern SaaS product design.
+                Manage projects, people, datasets, funding opportunities,
+                academic resources, milestones, and AI guidance through a clean,
+                responsive platform.
               </p>
             </motion.div>
 
@@ -462,13 +773,61 @@ export default function Homepage() {
                   <motion.div
                     key={feature.title}
                     variants={fadeUpVariant}
-                    className="rounded-[28px] border border-slate-200 bg-white/85 p-6 shadow-lg shadow-slate-100/80 backdrop-blur-sm transition-all hover:-translate-y-1 hover:shadow-xl"
+                    className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-lg shadow-slate-200/60 backdrop-blur-xl transition-all hover:-translate-y-1 hover:bg-white/95 hover:shadow-xl"
                   >
                     <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                       <Icon className="h-5 w-5" />
                     </div>
 
-                    <h3 className="text-xl font-bold text-slate-900">
+                    <h3 className="font-serif text-xl font-semibold text-slate-900">
+                      {feature.title}
+                    </h3>
+
+                    <p className="mt-3 leading-7 text-slate-600">
+                      {feature.description}
+                    </p>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+
+            <motion.div
+              variants={fadeUpVariant}
+              className="mt-8 grid gap-6 md:grid-cols-3"
+            >
+              {[
+                {
+                  title: "Track Milestones",
+                  description:
+                    "Break research projects into milestones and subtasks with automatic progress updates.",
+                  icon: BarChart3,
+                },
+                {
+                  title: "Discover Funding",
+                  description:
+                    "Browse funding opportunities and keep track of deadlines and eligibility details.",
+                  icon: Globe,
+                },
+                {
+                  title: "Academic Resources",
+                  description:
+                    "Explore research tools, journal databases, reference managers, and useful academic links.",
+                  icon: BookOpen,
+                },
+              ].map((feature) => {
+                const Icon = feature.icon;
+
+                return (
+                  <motion.div
+                    key={feature.title}
+                    variants={fadeUpVariant}
+                    className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-lg shadow-slate-200/60 backdrop-blur-xl transition-all hover:-translate-y-1 hover:bg-white/95 hover:shadow-xl"
+                  >
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                      <Icon className="h-5 w-5" />
+                    </div>
+
+                    <h3 className="font-serif text-xl font-semibold text-slate-900">
                       {feature.title}
                     </h3>
 
@@ -481,8 +840,54 @@ export default function Homepage() {
             </motion.div>
           </motion.section>
         </main>
+
+        <footer ref={footerRef} className="bg-slate-950 text-white mt-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10 py-10">
+            <div className="grid gap-8 md:grid-cols-3">
+              <div>
+                <h3 className="text-lg font-semibold">Research Connect</h3>
+                <p className="mt-3 text-sm text-slate-300 leading-6">
+                  A modern platform to connect researchers, manage projects,
+                  share datasets, and collaborate efficiently.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                  Contact
+                </h4>
+                <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                  <li>support@researchconnect.com</li>
+                  <li>admin@researchconnect.com</li>
+                  <li>collab@researchconnect.com</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                  Explore
+                </h4>
+                <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                  <li className="hover:text-white cursor-pointer">Projects</li>
+                  <li className="hover:text-white cursor-pointer">Researchers</li>
+                  <li className="hover:text-white cursor-pointer">Datasets</li>
+                  <li className="hover:text-white cursor-pointer">Funding</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-8 h-px w-full bg-slate-800" />
+
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+              <p>
+                © {new Date().getFullYear()} Research Connect. All rights
+                reserved.
+              </p>
+              <p>Built for academic collaboration and innovation.</p>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
 }
-

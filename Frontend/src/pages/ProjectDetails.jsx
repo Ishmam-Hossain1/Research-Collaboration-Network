@@ -160,6 +160,142 @@ const ProjectDetails = () => {
       : progressValue >= 40
       ? "from-amber-400 to-orange-500"
       : "from-rose-400 to-pink-500";
+  }, [id, refreshTrigger]);
+
+  const refreshProjectData = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+
+    if (!user) {
+      alert("Please login to leave feedback");
+      return;
+    }
+
+    if (rating === 0) {
+      setError("Please select a rating");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError("");
+
+      let res;
+      if (isEditing && editingFeedbackId) {
+        res = await api.put(`/feedback/${editingFeedbackId}`, { rating, comment });
+      } else {
+        res = await api.post(`/feedback/${id}`, { rating, comment });
+      }
+
+      if (isEditing) {
+        setFeedbacks(
+          feedbacks.map((f) =>
+            f._id === editingFeedbackId ? res.data.feedback : f
+          )
+        );
+      } else {
+        const existingIdx = feedbacks.findIndex(
+          (f) => f.user?._id === user.id || f.user === user.id
+        );
+
+        if (existingIdx !== -1) {
+          const updatedFeedbacks = [...feedbacks];
+          updatedFeedbacks[existingIdx] = res.data.feedback;
+          setFeedbacks(updatedFeedbacks);
+        } else {
+          setFeedbacks([res.data.feedback, ...feedbacks]);
+        }
+      }
+
+      setComment("");
+      setRating(0);
+      setIsEditing(false);
+      setEditingFeedbackId(null);
+      alert(res.data.message);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to submit feedback");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditFeedback = (f) => {
+    setRating(f.rating);
+    setComment(f.comment);
+    setIsEditing(true);
+    setEditingFeedbackId(f._id);
+    const feedbackForm = document.getElementById("feedback-form");
+    if (feedbackForm) {
+      window.scrollTo({
+        top: feedbackForm.offsetTop - 100,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setRating(0);
+    setComment("");
+    setIsEditing(false);
+    setEditingFeedbackId(null);
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+
+    try {
+      await api.delete(`/feedback/${feedbackId}`);
+      setFeedbacks(feedbacks.filter((f) => f._id !== feedbackId));
+
+      if (editingFeedbackId === feedbackId) {
+        handleCancelEdit();
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to delete feedback");
+    }
+  };
+
+  const averageRating =
+    feedbacks.length > 0
+      ? (
+          feedbacks.reduce((acc, curr) => acc + curr.rating, 0) / feedbacks.length
+        ).toFixed(1)
+      : 0;
+
+  const derivedStatus = useMemo(() => {
+    const progress = Number(project?.progress ?? 0);
+
+    if (progress >= 100) {
+      return {
+        label: "Completed",
+        key: "completed",
+        badgeClass: "bg-emerald-500/20 text-emerald-300",
+        icon: CheckCircle2,
+        statCardClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      };
+    }
+
+    if (progress > 0) {
+      return {
+        label: "Ongoing",
+        key: "ongoing",
+        badgeClass: "bg-amber-500/20 text-amber-300",
+        icon: PlayCircle,
+        statCardClass: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+
+    return {
+      label: "Pending",
+      key: "pending",
+      badgeClass: "bg-slate-500/20 text-slate-200",
+      icon: CircleDashed,
+      statCardClass: "border-slate-200 bg-slate-100 text-slate-700",
+    };
+  }, [project?.progress]);
 
   if (loading) {
     return (
@@ -557,6 +693,85 @@ const ProjectDetails = () => {
           </div>
         </section>
       </main>
+              <div className="space-y-4 lg:col-span-2">
+                {feedbacks.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-slate-200 bg-white/50 p-12 text-center">
+                    <MessageSquare className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+                    <p className="text-lg font-medium text-slate-500">
+                      No reviews yet. Be the first to share your thoughts!
+                    </p>
+                  </div>
+                ) : (
+                  feedbacks.map((f) => (
+                    <div
+                      key={f._id}
+                      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md md:p-8"
+                    >
+                      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                        <div className="flex gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-lg font-bold text-blue-700">
+                            {f.user?.username?.charAt(0) || "U"}
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-bold uppercase tracking-tight text-slate-900">
+                              {f.user?.username || "Researcher"}
+                            </h4>
+                            <div className="mt-1 flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  size={14}
+                                  className={
+                                    star <= f.rating
+                                      ? "fill-amber-400 text-amber-400"
+                                      : "text-slate-200"
+                                  }
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {user &&
+                            (f.user?._id === user.id || f.user === user.id) && (
+                              <div className="mr-2 flex items-center gap-2">
+                                <button
+                                  onClick={() => handleEditFeedback(f)}
+                                  className="rounded-xl p-2 text-slate-400 transition-all hover:bg-blue-50 hover:text-blue-600"
+                                  title="Edit Review"
+                                >
+                                  <Pencil size={18} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteFeedback(f._id)}
+                                  className="rounded-xl p-2 text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
+                                  title="Delete Review"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            )}
+                          <span className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-slate-400">
+                            <Clock3 size={14} />{" "}
+                            {new Date(f.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {f.comment && (
+                        <p className="mt-6 text-lg italic leading-relaxed text-slate-600">
+                          &ldquo;{f.comment}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
 
       {feedbackOpen && (
         <FeedbackModal

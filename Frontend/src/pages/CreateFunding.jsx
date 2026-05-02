@@ -20,7 +20,7 @@ const CreateFunding = () => {
     eligibilityCriteria: "",
   });
 
-  const [showPopup, setShowPopup] = useState(false);
+  const [showPopup, setShowPopup] = useState(false); //success popup
 
   const handleChange = (e) => {
     setFormData({
@@ -95,26 +95,6 @@ const CreateFunding = () => {
                 </p>
               </div>
 
-              {/* <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-center backdrop-blur-sm">
-                  <p className="text-2xl font-bold">4</p>
-                  <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-blue-100/80">
-                    Fields
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-center backdrop-blur-sm">
-                  <p className="text-2xl font-bold">1</p>
-                  <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-blue-100/80">
-                    Form
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-center backdrop-blur-sm sm:col-span-1 col-span-2">
-                  <p className="text-2xl font-bold">Live</p>
-                  <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-blue-100/80">
-                    Publish
-                  </p>
-                </div>
-              </div> */}
             </div>
           </div>
 
@@ -242,7 +222,7 @@ const CreateFunding = () => {
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition duration-200 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
                         <input
                           id="deadline"
-                          type="date"
+                          type="datetime-local"
                           name="deadline"
                           value={formData.deadline}
                           onChange={handleChange}

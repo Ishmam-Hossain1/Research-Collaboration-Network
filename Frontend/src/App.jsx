@@ -1,22 +1,34 @@
+
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Homepage";
-import UserProfile from "./pages/UserProfile";
 import Dashboard from "./pages/Dashboard";
 import AllProjects from "./pages/AllProjects";
-import DatasetList from "./pages/DatasetList";
-import UploadDataset from "./pages/UploadDataset";
+import UserProfile from "./pages/UserProfile";
 import Researchers from "./pages/Researchers";
 import ResearcherProfile from "./pages/ResearcherProfile";
 import CollaborationRequests from "./pages/CollaborationRequests";
 import Funding from "./pages/Funding";
 import CreateFunding from "./pages/CreateFunding";
 import EditFunding from "./pages/EditFunding";
+import Resources from "./pages/Resources";
 import ProjectDetails from "./pages/ProjectDetails";
 import MilestonesPage from "./pages/MilestonesPage";
 import Conferences from "./pages/Conferences";
+import DatasetList from "./pages/DatasetList";
+import UploadDataset from "./pages/UploadDataset";
+import ApplyGrant from "./pages/ApplyGrant";
+import MyGrantApplications from "./pages/MyGrantApplications";
+import ReceivedGrantApplications from "./pages/ReceivedGrantApplications";
+import EditGrantApplication from "./pages/EditGrantApplication";
+import EquipmentList from "./pages/EquipmentList";
+import MyEquipment from "./pages/MyEquipment";
+import EditEquipment from "./pages/EditEquipment";
+import EquipmentBookings from "./pages/EquipmentBookings";
+import EquipmentDetail from "./pages/EquipmentDetail";
+import ListEquipment from "./pages/ListEquipment";
 
 import {
   ChatSidebarProvider,
@@ -25,17 +37,19 @@ import {
 import { Sidebar, SidebarBody } from "./components/ui/sidebar";
 import ChatSidebarContent from "./components/ChatSidebarContent";
 import ChatWindow from "./components/ChatWindow";
+import FloatingAIChatbot from "./components/FloatingAIChatbot";
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/home" element={<Home />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/projects" element={<AllProjects />} />
       <Route path="/projects/:id" element={<ProjectDetails />} />
+      <Route path="/projects/:id/milestones" element={<MilestonesPage />} />
       <Route path="/profile" element={<UserProfile />} />
       <Route path="/datasets" element={<DatasetList />} />
       <Route path="/upload-dataset" element={<UploadDataset />} />
@@ -70,12 +84,25 @@ function AppRoutes() {
           </div>
         }
       />
+      <Route path="/resources" element={<Resources />} />
+      <Route path="/funding/:id/apply" element={<ApplyGrant />} />
+      <Route path="/grant-applications/mine" element={<MyGrantApplications />} />
+      <Route path="/grant-applications/received" element={<ReceivedGrantApplications />} />
+      <Route path="/grant-applications/:id/edit" element={<EditGrantApplication />} />
+      <Route path="/equipment" element={<EquipmentList />} />
+      <Route path="/equipment/new" element={<ListEquipment />} />
+      <Route path="/equipment/manage" element={<MyEquipment />} />
+      <Route path="/equipment/edit/:id" element={<EditEquipment />} />
+      <Route path="/equipment/my-bookings" element={<EquipmentBookings />} />
+      <Route path="/equipment/:id" element={<EquipmentDetail />} />
     </Routes>
   );
 }
 
 function GlobalChatSidebar() {
   const { isChatSidebarOpen, setIsChatSidebarOpen } = useChatSidebar();
+
+  if (!isChatSidebarOpen) return null;
 
   return (
     <div className="pointer-events-none fixed right-0 top-[78px] z-20 h-[calc(100vh-78px)]">
@@ -103,6 +130,7 @@ function AppContent() {
     <>
       {!hideChat && <GlobalChatSidebar />}
       {!hideChat && <ChatWindow />}
+      {!hideChat && <FloatingAIChatbot />}
       <AppRoutes />
     </>
   );
