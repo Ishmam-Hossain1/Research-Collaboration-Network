@@ -35,7 +35,8 @@ export const createFundingOpportunity = async (req, res) => {
 export const getAllFundingOpportunities = async (req, res) => {
   try {
     const fundingOpportunities = await FundingOpportunity.find()
-      .populate("postedBy", "username email")
+      // .populate("postedBy", "username email")
+      .populate("postedBy", "username email profilePictureId")
       .sort({
         createdAt: -1,
       });
@@ -52,7 +53,8 @@ export const getAllFundingOpportunities = async (req, res) => {
 export const getFundingOpportunityById = async (req, res) => {
   try {
     const fundingOpportunity = await FundingOpportunity.findById(req.params.id)
-      .populate("postedBy", "username email");
+      // .populate("postedBy", "username email");
+      .populate("postedBy", "username email profilePictureId")
 
     if (!fundingOpportunity) {
       return res.status(404).json({ message: "Funding opportunity not found" });
