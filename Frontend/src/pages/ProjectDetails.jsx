@@ -68,10 +68,12 @@ const FloatingResearchDecor = () => {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
             50% { transform: translateY(-18px) rotate(6deg); }
           }
+
           @keyframes floatTwo {
             0%, 100% { transform: translateY(0px) translateX(0px); }
             50% { transform: translateY(-14px) translateX(8px); }
           }
+
           @keyframes floatThree {
             0%, 100% { transform: translateY(0px) scale(1); }
             50% { transform: translateY(-20px) scale(1.06); }
@@ -79,9 +81,10 @@ const FloatingResearchDecor = () => {
         `}
       </style>
 
-      <div className="pointer-events-none fixed inset-0 z-[5] hidden overflow-hidden xl:block">
+      <div className="pointer-events-none fixed inset-0 z-[1] hidden overflow-hidden xl:block">
         {items.map((item, index) => {
           const Icon = item.icon;
+
           return (
             <div
               key={index}
@@ -160,147 +163,12 @@ const ProjectDetails = () => {
       : progressValue >= 40
       ? "from-amber-400 to-orange-500"
       : "from-rose-400 to-pink-500";
-  }, [id, refreshTrigger]);
-
-  const refreshProjectData = () => {
-    setRefreshTrigger((prev) => prev + 1);
-  };
-
-  const handleSubmitFeedback = async (e) => {
-    e.preventDefault();
-
-    if (!user) {
-      alert("Please login to leave feedback");
-      return;
-    }
-
-    if (rating === 0) {
-      setError("Please select a rating");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setError("");
-
-      let res;
-      if (isEditing && editingFeedbackId) {
-        res = await api.put(`/feedback/${editingFeedbackId}`, { rating, comment });
-      } else {
-        res = await api.post(`/feedback/${id}`, { rating, comment });
-      }
-
-      if (isEditing) {
-        setFeedbacks(
-          feedbacks.map((f) =>
-            f._id === editingFeedbackId ? res.data.feedback : f
-          )
-        );
-      } else {
-        const existingIdx = feedbacks.findIndex(
-          (f) => f.user?._id === user.id || f.user === user.id
-        );
-
-        if (existingIdx !== -1) {
-          const updatedFeedbacks = [...feedbacks];
-          updatedFeedbacks[existingIdx] = res.data.feedback;
-          setFeedbacks(updatedFeedbacks);
-        } else {
-          setFeedbacks([res.data.feedback, ...feedbacks]);
-        }
-      }
-
-      setComment("");
-      setRating(0);
-      setIsEditing(false);
-      setEditingFeedbackId(null);
-      alert(res.data.message);
-    } catch (error) {
-      setError(error.response?.data?.message || "Failed to submit feedback");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEditFeedback = (f) => {
-    setRating(f.rating);
-    setComment(f.comment);
-    setIsEditing(true);
-    setEditingFeedbackId(f._id);
-    const feedbackForm = document.getElementById("feedback-form");
-    if (feedbackForm) {
-      window.scrollTo({
-        top: feedbackForm.offsetTop - 100,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setRating(0);
-    setComment("");
-    setIsEditing(false);
-    setEditingFeedbackId(null);
-  };
-
-  const handleDeleteFeedback = async (feedbackId) => {
-    if (!window.confirm("Are you sure you want to delete this review?")) return;
-
-    try {
-      await api.delete(`/feedback/${feedbackId}`);
-      setFeedbacks(feedbacks.filter((f) => f._id !== feedbackId));
-
-      if (editingFeedbackId === feedbackId) {
-        handleCancelEdit();
-      }
-    } catch (error) {
-      alert(error.response?.data?.message || "Failed to delete feedback");
-    }
-  };
-
-  const averageRating =
-    feedbacks.length > 0
-      ? (
-          feedbacks.reduce((acc, curr) => acc + curr.rating, 0) / feedbacks.length
-        ).toFixed(1)
-      : 0;
-
-  const derivedStatus = useMemo(() => {
-    const progress = Number(project?.progress ?? 0);
-
-    if (progress >= 100) {
-      return {
-        label: "Completed",
-        key: "completed",
-        badgeClass: "bg-emerald-500/20 text-emerald-300",
-        icon: CheckCircle2,
-        statCardClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-      };
-    }
-
-    if (progress > 0) {
-      return {
-        label: "Ongoing",
-        key: "ongoing",
-        badgeClass: "bg-amber-500/20 text-amber-300",
-        icon: PlayCircle,
-        statCardClass: "border-amber-200 bg-amber-50 text-amber-700",
-      };
-    }
-
-    return {
-      label: "Pending",
-      key: "pending",
-      badgeClass: "bg-slate-500/20 text-slate-200",
-      icon: CircleDashed,
-      statCardClass: "border-slate-200 bg-slate-100 text-slate-700",
-    };
-  }, [project?.progress]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#eef5ff]">
         <Navbar />
+
         <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
           <div className="rounded-[32px] border border-white/80 bg-white/80 p-10 text-center text-slate-500 shadow-[0_24px_70px_rgba(37,99,235,0.10)]">
             Loading project details...
@@ -314,11 +182,13 @@ const ProjectDetails = () => {
     return (
       <div className="min-h-screen bg-[#eef5ff]">
         <Navbar />
+
         <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
           <div className="rounded-[32px] border border-white/80 bg-white/80 p-10 text-center shadow-[0_24px_70px_rgba(37,99,235,0.10)]">
             <h2 className="text-2xl font-black text-slate-900">
               Project not found
             </h2>
+
             <button
               onClick={() => navigate("/projects")}
               className="mt-4 rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white"
@@ -340,6 +210,7 @@ const ProjectDetails = () => {
         <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-blue-300/40 blur-[120px]" />
         <div className="absolute right-[-100px] top-20 h-[420px] w-[420px] rounded-full bg-cyan-300/30 blur-[130px]" />
         <div className="absolute bottom-[-160px] left-[22%] h-[520px] w-[520px] rounded-full bg-violet-200/35 blur-[150px]" />
+
         <div
           className="absolute inset-0 opacity-[0.30]"
           style={{
@@ -351,7 +222,6 @@ const ProjectDetails = () => {
       </div>
 
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 md:px-8">
-        {/* TOP ACTION */}
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -370,7 +240,6 @@ const ProjectDetails = () => {
           </button>
         </div>
 
-        {/* HERO */}
         <section className="mb-8 overflow-hidden rounded-[34px] border border-white/80 bg-white/75 shadow-[0_24px_70px_rgba(37,99,235,0.12)] backdrop-blur-xl">
           <div className="relative overflow-hidden bg-gradient-to-br from-[#dbeafe] via-[#eef6ff] to-[#cfe7ff] px-6 py-8 md:px-8">
             <div
@@ -381,6 +250,7 @@ const ProjectDetails = () => {
                 backgroundSize: "22px 22px",
               }}
             />
+
             <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-cyan-300/35 blur-3xl" />
             <div className="absolute bottom-[-90px] left-1/3 h-64 w-64 rounded-full bg-violet-300/25 blur-3xl" />
 
@@ -407,6 +277,7 @@ const ProjectDetails = () => {
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-black text-white shadow">
                       {(project.owner?.username || "R").charAt(0).toUpperCase()}
                     </div>
+
                     <span>
                       By{" "}
                       <span className="font-black text-slate-900">
@@ -422,8 +293,7 @@ const ProjectDetails = () => {
 
                   <div className="inline-flex items-center gap-2">
                     <Star size={16} className="fill-amber-400 text-amber-400" />
-                    {project.feedbackCount || project.reviewCount || 0} (
-                    {project.feedbackCount || project.reviewCount || 0} reviews)
+                    {project.feedbackCount || project.reviewCount || 0} reviews
                   </div>
                 </div>
               </div>
@@ -439,9 +309,7 @@ const ProjectDetails = () => {
           </div>
         </section>
 
-        {/* CONTENT */}
         <section className="grid gap-6 lg:grid-cols-[1.7fr_0.9fr]">
-          {/* LEFT COLUMN */}
           <div className="space-y-6">
             <InfoSection
               title="Abstract"
@@ -488,6 +356,7 @@ const ProjectDetails = () => {
                   iconColor="text-blue-600"
                   iconBg="bg-blue-100"
                 />
+
                 <MiniCard
                   icon={CalendarDays}
                   title="End Date"
@@ -495,6 +364,7 @@ const ProjectDetails = () => {
                   iconColor="text-cyan-600"
                   iconBg="bg-cyan-100"
                 />
+
                 <MiniCard
                   icon={Landmark}
                   title="Funding Source"
@@ -502,6 +372,7 @@ const ProjectDetails = () => {
                   iconColor="text-violet-600"
                   iconBg="bg-violet-100"
                 />
+
                 <MiniCard
                   icon={FolderKanban}
                   title="Research Field"
@@ -517,6 +388,7 @@ const ProjectDetails = () => {
                 <div className="rounded-2xl bg-blue-100 p-3">
                   <Tags size={20} className="text-blue-600" />
                 </div>
+
                 <h3 className="text-2xl font-black text-slate-950">
                   Keywords
                 </h3>
@@ -543,6 +415,7 @@ const ProjectDetails = () => {
                 <div className="rounded-2xl bg-emerald-100 p-3">
                   <Users size={20} className="text-emerald-600" />
                 </div>
+
                 <h3 className="text-2xl font-black text-slate-950">
                   Collaborators
                 </h3>
@@ -558,6 +431,7 @@ const ProjectDetails = () => {
                       <span className="font-semibold text-slate-700">
                         {collaborator}
                       </span>
+
                       <ChevronRight size={16} className="text-slate-400" />
                     </div>
                   ))}
@@ -568,7 +442,6 @@ const ProjectDetails = () => {
             </section>
           </div>
 
-          {/* RIGHT COLUMN */}
           <div className="space-y-6">
             <section className="rounded-[30px] border border-white/80 bg-white/80 p-6 shadow-[0_20px_55px_rgba(37,99,235,0.10)] backdrop-blur-xl">
               <p className="mb-4 text-sm font-black uppercase tracking-[0.16em] text-slate-500">
@@ -605,6 +478,7 @@ const ProjectDetails = () => {
                       <h4 className="text-xl font-black text-slate-900">
                         {statusText}
                       </h4>
+
                       <p className="text-sm text-slate-500">
                         Status is updated automatically from milestone progress.
                       </p>
@@ -616,10 +490,12 @@ const ProjectDetails = () => {
                   <div className="mb-4 flex items-center justify-between">
                     <div className="inline-flex items-center gap-2">
                       <BarChart3 size={18} className="text-blue-500" />
+
                       <span className="text-lg font-black text-slate-900">
                         Overall Progress
                       </span>
                     </div>
+
                     <span className="text-3xl font-black text-slate-950">
                       {progressValue}%
                     </span>
@@ -645,6 +521,7 @@ const ProjectDetails = () => {
                 <div className="rounded-2xl bg-cyan-100 p-3">
                   <Network size={20} className="text-cyan-600" />
                 </div>
+
                 <h3 className="text-xl font-black text-slate-950">
                   Quick Summary
                 </h3>
@@ -670,15 +547,16 @@ const ProjectDetails = () => {
                 <div className="rounded-2xl bg-violet-100 p-3">
                   <MessageSquareText size={20} className="text-violet-600" />
                 </div>
+
                 <h3 className="text-xl font-black text-slate-950">
                   Research Note
                 </h3>
               </div>
 
               <p className="text-sm leading-7 text-slate-600">
-                To keep this project fully synchronized, update milestone titles,
-                deadlines, completion, and subtasks from the Milestones page.
-                The project card progress and current status will update
+                To keep this project fully synchronized, update milestone
+                titles, deadlines, completion, and subtasks from the Milestones
+                page. The project card progress and current status will update
                 automatically.
               </p>
 
@@ -693,92 +571,14 @@ const ProjectDetails = () => {
           </div>
         </section>
       </main>
-              <div className="space-y-4 lg:col-span-2">
-                {feedbacks.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-slate-200 bg-white/50 p-12 text-center">
-                    <MessageSquare className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-                    <p className="text-lg font-medium text-slate-500">
-                      No reviews yet. Be the first to share your thoughts!
-                    </p>
-                  </div>
-                ) : (
-                  feedbacks.map((f) => (
-                    <div
-                      key={f._id}
-                      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md md:p-8"
-                    >
-                      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                        <div className="flex gap-4">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-lg font-bold text-blue-700">
-                            {f.user?.username?.charAt(0) || "U"}
-                          </div>
-                          <div>
-                            <h4 className="text-lg font-bold uppercase tracking-tight text-slate-900">
-                              {f.user?.username || "Researcher"}
-                            </h4>
-                            <div className="mt-1 flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  size={14}
-                                  className={
-                                    star <= f.rating
-                                      ? "fill-amber-400 text-amber-400"
-                                      : "text-slate-200"
-                                  }
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          {user &&
-                            (f.user?._id === user.id || f.user === user.id) && (
-                              <div className="mr-2 flex items-center gap-2">
-                                <button
-                                  onClick={() => handleEditFeedback(f)}
-                                  className="rounded-xl p-2 text-slate-400 transition-all hover:bg-blue-50 hover:text-blue-600"
-                                  title="Edit Review"
-                                >
-                                  <Pencil size={18} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteFeedback(f._id)}
-                                  className="rounded-xl p-2 text-slate-400 transition-all hover:bg-red-50 hover:text-red-600"
-                                  title="Delete Review"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </div>
-                            )}
-                          <span className="flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-slate-400">
-                            <Clock3 size={14} />{" "}
-                            {new Date(f.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {f.comment && (
-                        <p className="mt-6 text-lg italic leading-relaxed text-slate-600">
-                          &ldquo;{f.comment}&rdquo;
-                        </p>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
-        </main>
-      </div>
 
       {feedbackOpen && (
         <FeedbackModal
-          isOpen={feedbackOpen}
-          onClose={() => setFeedbackOpen(false)}
-          projectId={id}
-          onFeedbackSubmitted={fetchProjectDetails}
+          project={project}
+          onClose={() => {
+            setFeedbackOpen(false);
+            fetchProjectDetails();
+          }}
         />
       )}
     </div>
@@ -798,6 +598,7 @@ const InfoSection = ({
         <div className={`rounded-2xl p-3 ${iconBg}`}>
           <Icon size={22} className={iconColor} />
         </div>
+
         <h3 className="text-2xl font-black text-slate-950">{title}</h3>
       </div>
 
@@ -817,10 +618,12 @@ const MiniCard = ({ icon: Icon, title, value, iconColor, iconBg }) => {
         <div className={`rounded-2xl p-3 ${iconBg}`}>
           <Icon size={18} className={iconColor} />
         </div>
+
         <span className="text-sm font-black uppercase tracking-[0.12em] text-slate-500">
           {title}
         </span>
       </div>
+
       <p className="text-base font-bold text-slate-800">{value}</p>
     </div>
   );
@@ -832,6 +635,7 @@ const QuickStat = ({ label, value }) => {
       <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
         {label}
       </p>
+
       <p className="mt-1 text-sm font-bold text-slate-800">{value}</p>
     </div>
   );

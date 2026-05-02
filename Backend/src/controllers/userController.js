@@ -1069,9 +1069,9 @@ export const sendCollaborationRequest = async (req, res) => {
     }
 
     if (fromUserId === toUserId) {
-      return res
-        .status(400)
-        .json({ message: "You cannot send a collaboration request to yourself" });
+      return res.status(400).json({
+        message: "You cannot send a collaboration request to yourself",
+      });
     }
 
     const fromUser = await User.findById(fromUserId);
@@ -1116,6 +1116,15 @@ export const sendCollaborationRequest = async (req, res) => {
 
     await toUser.save();
     await fromUser.save();
+
+    await createNotification({
+      recipient: toUser._id,
+      sender: fromUser._id,
+      title: "New Collaboration Request",
+      message: `${fromUser.username} sent you a collaboration request.`,
+      type: "collaboration",
+      link: "/collaboration-requests",
+    });
 
     res.status(200).json({
       message: "Collaboration request sent successfully",
