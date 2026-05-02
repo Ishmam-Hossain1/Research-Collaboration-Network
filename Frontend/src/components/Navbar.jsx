@@ -82,7 +82,7 @@ const Navbar = () => {
       </nav>
 
       <div className="nav-icons">
-        <NotificationBell />
+        {user && <NotificationBell />}
 
         <button
           type="button"
