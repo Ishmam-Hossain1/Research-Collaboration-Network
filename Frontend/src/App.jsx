@@ -16,12 +16,21 @@ import EditFunding from "./pages/EditFunding";
 import Resources from "./pages/Resources";
 import ProjectDetails from "./pages/ProjectDetails";
 import MilestonesPage from "./pages/MilestonesPage";
+import Conferences from "./pages/Conferences";
 import DatasetList from "./pages/DatasetList";
 import UploadDataset from "./pages/UploadDataset";
 import ApplyGrant from "./pages/ApplyGrant";
 import MyGrantApplications from "./pages/MyGrantApplications";
 import ReceivedGrantApplications from "./pages/ReceivedGrantApplications";
 import EditGrantApplication from "./pages/EditGrantApplication";
+import EquipmentList from "./pages/EquipmentList";
+import MyEquipment from "./pages/MyEquipment";
+import EditEquipment from "./pages/EditEquipment";
+import EquipmentBookings from "./pages/EquipmentBookings";
+import EquipmentDetail from "./pages/EquipmentDetail";
+import ListEquipment from "./pages/ListEquipment";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 
 import {
   ChatSidebarProvider,
@@ -35,7 +44,7 @@ import FloatingAIChatbot from "./components/FloatingAIChatbot";
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/home" element={<Home />} />
@@ -55,11 +64,41 @@ function AppRoutes() {
       <Route path="/funding" element={<Funding />} />
       <Route path="/funding/new" element={<CreateFunding />} />
       <Route path="/funding/edit/:id" element={<EditFunding />} />
+      <Route path="/projects/:id/milestones" element={<MilestonesPage />} />
+
+      {/* ✅ Conferences Page */}
+      <Route path="/conferences" element={<Conferences />} />
+
+      {/* ✅ Google Calendar Success Page */}
+      <Route
+        path="/calendar-connected"
+        element={
+          <div className="min-h-screen flex items-center justify-center bg-slate-50">
+            <div className="rounded-3xl bg-white p-8 shadow border">
+              <h1 className="text-2xl font-bold text-slate-900">
+                Google Calendar Connected
+              </h1>
+              <p className="mt-2 text-slate-600">
+                You can now add academic conferences and deadlines to your
+                calendar.
+              </p>
+            </div>
+          </div>
+        }
+      />
       <Route path="/resources" element={<Resources />} />
       <Route path="/funding/:id/apply" element={<ApplyGrant />} />
       <Route path="/grant-applications/mine" element={<MyGrantApplications />} />
       <Route path="/grant-applications/received" element={<ReceivedGrantApplications />} />
       <Route path="/grant-applications/:id/edit" element={<EditGrantApplication />} />
+      <Route path="/equipment" element={<EquipmentList />} />
+      <Route path="/equipment/new" element={<ListEquipment />} />
+      <Route path="/equipment/manage" element={<MyEquipment />} />
+      <Route path="/equipment/edit/:id" element={<EditEquipment />} />
+      <Route path="/equipment/my-bookings" element={<EquipmentBookings />} />
+      <Route path="/equipment/:id" element={<EquipmentDetail />} />
+      <Route path="/equipment/booking/payment-success" element={<PaymentSuccess />} />
+      <Route path="/equipment/booking/payment-cancel" element={<PaymentCancel />} />
     </Routes>
   );
 }

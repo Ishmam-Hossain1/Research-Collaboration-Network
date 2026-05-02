@@ -1083,7 +1083,7 @@ body {
 
 /* Uiverse-inspired researcher cards */
 
-.section_our_solution .row {
+/* .section_our_solution .row {
   align-items: center;
 }
 
@@ -1422,6 +1422,69 @@ body {
   .solution_card .solu_description p {
     min-height: 88px;
   }
+} */
+
+
+.solution_cards_box .solution_card {
+  width: 100%;
+  min-height: 365px; /* ✅ shortened */
+  background: #fff;
+  box-shadow:
+    0 2px 4px 0 rgba(136, 144, 195, 0.2),
+    0 5px 15px 0 rgba(37, 44, 97, 0.15);
+  border-radius: 18px;
+  margin: 0;
+  padding: 20px 20px 16px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  transition: 0.45s ease;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  display: flex;
+  flex-direction: column;
+}
+
+/* REMOVE BIO SECTION COMPLETELY */
+.solution_card .solu_description {
+  display: none;
+}
+
+/* KEEP METRICS BUT TIGHTER */
+.solu_metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+/* REDUCE CHIP SECTION HEIGHT */
+.solu_chip_group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  min-height: auto;
+}
+
+/* KEEP TITLE CLEAN */
+.solution_card .solu_title div {
+  font-size: 1.4rem;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+/* BUTTON POSITION FIX */
+.solu_footer_button {
+  margin-top: auto;
+}
+
+/* MOBILE FIX */
+@media (max-width: 767px) {
+  .solution_cards_box .solution_card {
+    min-height: 340px;
+    padding: 18px;
+  }
 }
 
 
@@ -1447,6 +1510,131 @@ body {
     opacity: 0;
     transform: translateY(25px);
   }
+
+.scroll-list-container {
+  position: relative;
+  width: 100%;
+}
+
+.scroll-list {
+  overflow-y: auto;
+}
+
+.scroll-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll-list::-webkit-scrollbar-track {
+  background: #120f17;
+}
+
+.scroll-list::-webkit-scrollbar-thumb {
+  background: #2f293a;
+  border-radius: 4px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.item {
+  padding: 14px;
+  background-color: #2f293a;
+  border-radius: 14px;
+  margin-bottom: 0.75rem;
+  text-decoration: none;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.item:hover {
+  transform: translateY(-2px);
+  background-color: #3a3347;
+}
+
+.item.selected {
+  background-color: #2f293a;
+}
+
+.item-text {
+  color: white;
+  margin: 0;
+}
+
+/* UserProfile smooth page reveal animations */
+
+.profile-page-enter {
+  animation: profilePageFade 0.7s ease-out both;
+}
+
+.profile-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  animation: profileRevealUp 0.9s ease-out forwards;
+}
+
+.profile-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.profile-delay-2 {
+  animation-delay: 0.24s;
+}
+
+.profile-delay-3 {
+  animation-delay: 0.36s;
+}
+
+.profile-delay-4 {
+  animation-delay: 0.48s;
+}
+
+.profile-delay-5 {
+  animation-delay: 0.6s;
+}
+
+.profile-card-reveal {
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+  animation: profileCardReveal 0.75s ease-out forwards;
+}
+
+.profile-card-reveal:nth-child(1) {
+  animation-delay: 0.12s;
+}
+
+.profile-card-reveal:nth-child(2) {
+  animation-delay: 0.22s;
+}
+
+.profile-card-reveal:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.profile-card-reveal:nth-child(4) {
+  animation-delay: 0.42s;
+}
+
+@keyframes profilePageFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes profileRevealUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1456,3 +1644,15 @@ body {
 .fade-up {
   animation: fadeUp 0.6s ease-out both;
 }
+@keyframes profileCardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+ 

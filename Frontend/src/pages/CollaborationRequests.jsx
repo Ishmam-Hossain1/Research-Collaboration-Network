@@ -109,6 +109,32 @@ export default function CollaborationRequests() {
     }
   };
 
+  const handleCancelSentRequest = async (toUserId) => {
+    if (!storedUser?.id) return;
+
+    try {
+      setActionLoadingId(toUserId);
+      setError("");
+
+      await axios.post(
+        "http://localhost:5000/api/users/collaboration-request/cancel",
+        {
+          fromUserId: storedUser.id,
+          toUserId,
+        }
+      );
+
+      setSentRequests((prev) => prev.filter((user) => user._id !== toUserId));
+    } catch (err) {
+      console.error("Failed to cancel collaboration request", err);
+      setError(
+        err.response?.data?.message || "Failed to cancel collaboration request"
+      );
+    } finally {
+      setActionLoadingId("");
+    }
+  };
+
   const requestsToShow =
     activeTab === "received" ? receivedRequests : sentRequests;
 
@@ -131,7 +157,10 @@ export default function CollaborationRequests() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setError("");
+              }}
               className={`pb-2 text-sm font-medium ${
                 activeTab === tab.id
                   ? "border-b-2 border-sky-500 text-slate-900"
@@ -261,7 +290,7 @@ export default function CollaborationRequests() {
                         type="button"
                         onClick={() => handleAccept(researcher._id)}
                         disabled={isProcessing}
-                        className="rounded-lg bg-green-600 px-3 py-1 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-lg bg-green-600 px-3 py-1 text-sm text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isProcessing ? "Processing..." : "Accept"}
                       </button>
@@ -270,7 +299,7 @@ export default function CollaborationRequests() {
                         type="button"
                         onClick={() => handleReject(researcher._id)}
                         disabled={isProcessing}
-                        className="rounded-lg bg-red-600 px-3 py-1 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-lg bg-red-600 px-3 py-1 text-sm text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isProcessing ? "Processing..." : "Reject"}
                       </button>
@@ -278,8 +307,19 @@ export default function CollaborationRequests() {
                   )}
 
                   {activeTab === "sent" && (
-                    <div className="pt-4 text-sm font-medium text-sky-600">
-                      Requested
+                    <div className="mt-5 flex items-center justify-between gap-3 pt-2">
+                      <span className="text-sm font-medium text-sky-600">
+                        Requested
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCancelSentRequest(researcher._id)}
+                        disabled={isProcessing}
+                        className="rounded-lg bg-red-600 px-3 py-1 text-sm text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isProcessing ? "Cancelling..." : "Cancel Request"}
+                      </button>
                     </div>
                   )}
                 </article>

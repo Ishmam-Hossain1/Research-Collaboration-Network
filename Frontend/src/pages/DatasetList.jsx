@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import {
@@ -15,8 +15,18 @@ import {
     X,
     Filter,
     Mail,
+    Calendar,
+    FileText,
+    ChevronDown,
+    ArrowRight,
+    Sparkles,
+    RefreshCw,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
+import SplashCursor from "../components/SplashCursor";
+import datasetBg from "../assets/dataset.webp";
+import pageBg from "../assets/datasetbackgroud..jpeg";
 
 const API = "http://localhost:5000";
 
@@ -24,17 +34,17 @@ const accessBadge = {
     public: {
         label: "Public",
         icon: <Globe size={12} />,
-        className: "bg-green-100 text-green-700",
+        className: "bg-emerald-100 text-emerald-700 border-emerald-200",
     },
     private: {
         label: "Private",
         icon: <Lock size={12} />,
-        className: "bg-red-100 text-red-700",
+        className: "bg-rose-100 text-rose-700 border-rose-200",
     },
     restricted: {
         label: "Restricted",
         icon: <Users size={12} />,
-        className: "bg-yellow-100 text-yellow-700",
+        className: "bg-amber-100 text-amber-700 border-amber-200",
     },
 };
 
@@ -45,6 +55,25 @@ const formatBytes = (bytes) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const fadeUpVariant = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] }
+    }
+};
+
+const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
 const DatasetList = () => {
     const [datasets, setDatasets] = useState([]);
     const [filtered, setFiltered] = useState([]);
@@ -52,8 +81,8 @@ const DatasetList = () => {
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [deletingId, setDeletingId] = useState(null);
-    const [filter, setFilter] = useState("all"); // "all" | "my"
-    const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest" | "az" | "za"
+    const [filter, setFilter] = useState("all"); 
+    const [sortBy, setSortBy] = useState("newest");
 
     // Edit Modal State
     const [editingDataset, setEditingDataset] = useState(null);
@@ -69,9 +98,15 @@ const DatasetList = () => {
     const [isEditing, setIsEditing] = useState(false);
 
     const token = localStorage.getItem("researchConnectToken");
-    const currentUser = JSON.parse(localStorage.getItem("researchConnectUser") || "null");
-
-    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+    const currentUser = useMemo(() => {
+        try {
+            return JSON.parse(localStorage.getItem("researchConnectUser") || "null");
+        } catch {
+            return null;
+        }
+    }, []);
+    
+    const authHeaders = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
 
     const fetchDatasets = async () => {
         setLoading(true);
@@ -80,8 +115,9 @@ const DatasetList = () => {
             const res = await axios.get(`${API}/api/datasets`, {
                 headers: authHeaders,
             });
-            setDatasets(res.data.datasets);
-            setFiltered(res.data.datasets);
+            const ds = res.data.datasets || [];
+            setDatasets(ds);
+            setFiltered(ds);
         } catch (err) {
             setError(err.response?.data?.message || "Failed to load datasets.");
         } finally {
@@ -91,20 +127,19 @@ const DatasetList = () => {
 
     useEffect(() => {
         fetchDatasets();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
+        if (!datasets) return;
         let result = datasets;
 
-        // Apply filter
         if (filter === "my" && currentUser) {
+            const userId = currentUser.id || currentUser._id;
             result = result.filter(
-                (ds) => ds.uploadedBy?._id === currentUser.id || ds.uploadedBy === currentUser.id
+                (ds) => ds.uploadedBy?._id === userId || ds.uploadedBy === userId
             );
         }
 
-        // Apply search
         if (search) {
             const lowerSearch = search.toLowerCase();
             result = result.filter(
@@ -115,22 +150,16 @@ const DatasetList = () => {
             );
         }
 
-        // Apply sort
         result = [...result].sort((a, b) => {
-            if (sortBy === "newest") {
-                return new Date(b.createdAt) - new Date(a.createdAt);
-            } else if (sortBy === "oldest") {
-                return new Date(a.createdAt) - new Date(b.createdAt);
-            } else if (sortBy === "az") {
-                return a.title.localeCompare(b.title);
-            } else if (sortBy === "za") {
-                return b.title.localeCompare(a.title);
-            }
+            if (sortBy === "newest") return new Date(b.createdAt) - new Date(a.createdAt);
+            if (sortBy === "oldest") return new Date(a.createdAt) - new Date(b.createdAt);
+            if (sortBy === "az") return a.title.localeCompare(b.title);
+            if (sortBy === "za") return b.title.localeCompare(a.title);
             return 0;
         });
 
         setFiltered(result);
-    }, [search, datasets, filter, sortBy, currentUser?.id]);
+    }, [search, datasets, filter, sortBy, currentUser]);
 
     const handleDownload = async (ds) => {
         try {
@@ -138,7 +167,6 @@ const DatasetList = () => {
                 headers: authHeaders,
                 responseType: "blob",
             });
-
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement("a");
             link.href = url;
@@ -148,10 +176,7 @@ const DatasetList = () => {
             link.remove();
             window.URL.revokeObjectURL(url);
         } catch (err) {
-            const msg = err.response?.status === 403
-                ? "Access denied. You don't have permission to download this dataset."
-                : "Download failed. Please try again.";
-            alert(msg);
+            alert(err.response?.status === 403 ? "Access denied." : "Download failed.");
         }
     };
 
@@ -159,9 +184,7 @@ const DatasetList = () => {
         if (!window.confirm("Are you sure you want to delete this dataset?")) return;
         setDeletingId(id);
         try {
-            await axios.delete(`${API}/api/datasets/${id}`, {
-                headers: authHeaders,
-            });
+            await axios.delete(`${API}/api/datasets/${id}`, { headers: authHeaders });
             setDatasets((prev) => prev.filter((ds) => ds._id !== id));
         } catch (err) {
             alert(err.response?.data?.message || "Delete failed.");
@@ -170,10 +193,11 @@ const DatasetList = () => {
         }
     };
 
-    const isOwner = (ds) =>
-        currentUser && (ds.uploadedBy?._id === currentUser.id || ds.uploadedBy === currentUser.id);
+    const isOwner = (ds) => {
+        const userId = currentUser?.id || currentUser?._id;
+        return currentUser && (ds.uploadedBy?._id === userId || ds.uploadedBy === userId);
+    };
 
-    // Edit Methods
     const openEditModal = (ds) => {
         setEditingDataset(ds);
         setEditFormData({
@@ -182,14 +206,7 @@ const DatasetList = () => {
             tags: ds.tags?.join(", ") || "",
             accessControl: ds.accessControl || "public",
         });
-
-        // Populate existing allowed users' emails
-        if (ds.allowedUsers && ds.allowedUsers.length > 0) {
-            const emails = ds.allowedUsers.map(user => user.email).filter(Boolean);
-            setEditAllowedEmails(emails);
-        } else {
-            setEditAllowedEmails([]);
-        }
+        setEditAllowedEmails(ds.allowedUsers?.map(u => u.email) || []);
         setEditEmailInput("");
         setEditError("");
     };
@@ -197,406 +214,403 @@ const DatasetList = () => {
     const handleEditAddEmail = (e) => {
         e.preventDefault();
         const trimmed = editEmailInput.trim().toLowerCase();
-        if (!trimmed) return;
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(trimmed)) {
-            setEditError("Please enter a valid email address.");
-            return;
-        }
-
-        if (editAllowedEmails.includes(trimmed)) {
-            setEditError("Email is already in the list.");
-            return;
-        }
-
+        if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return;
+        if (editAllowedEmails.includes(trimmed)) return;
         setEditAllowedEmails([...editAllowedEmails, trimmed]);
         setEditEmailInput("");
-        setEditError("");
-    };
-
-    const handleEditRemoveEmail = (emailToRemove) => {
-        setEditAllowedEmails(editAllowedEmails.filter((email) => email !== emailToRemove));
-    };
-
-    const handleEditChange = (e) => {
-        setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
     };
 
     const handleEditSubmit = async (e) => {
         e.preventDefault();
-        if (!editFormData.title.trim()) {
-            setEditError("Title is required.");
-            return;
-        }
-
-        setEditError("");
         setIsEditing(true);
-
-        const data = {
-            title: editFormData.title,
-            description: editFormData.description,
-            tags: editFormData.tags.split(",").map((t) => t.trim()).filter(Boolean),
-            accessControl: editFormData.accessControl,
-        };
-
-        if (editFormData.accessControl === "restricted") {
-            data.allowedUsers = JSON.stringify(editAllowedEmails);
-        }
-
         try {
-            await axios.put(`${API}/api/datasets/${editingDataset._id}`, data, {
-                headers: authHeaders,
-            });
+            const data = {
+                ...editFormData,
+                tags: editFormData.tags.split(",").map(t => t.trim()).filter(Boolean),
+                allowedUsers: editFormData.accessControl === "restricted" ? JSON.stringify(editAllowedEmails) : undefined,
+            };
+            await axios.put(`${API}/api/datasets/${editingDataset._id}`, data, { headers: authHeaders });
             setEditingDataset(null);
             fetchDatasets();
         } catch (err) {
-            setEditError(
-                err.response?.data?.message || "Failed to update dataset. Try again."
-            );
+            setEditError(err.response?.data?.message || "Failed to update.");
         } finally {
             setIsEditing(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-            <Navbar />
-            <div className="px-4 py-10">
-                <div className="mx-auto max-w-5xl">
-                    {/* Header */}
-                    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-slate-800">Research Datasets</h1>
-                            <p className="mt-1 text-slate-500">
-                                Browse and download datasets shared by the community
-                            </p>
-                        </div>
-                        <Link
-                            to="/upload-dataset"
-                            id="upload-dataset-btn"
-                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-blue-700 transition"
+        <div className="relative min-h-screen overflow-x-hidden bg-[#0a0f1a] text-slate-900">
+            {/* Dynamic Background */}
+            <div className="fixed inset-0 z-0">
+                <img 
+                    src={pageBg} 
+                    alt="Background" 
+                    className="h-full w-full object-cover opacity-40 blur-[5px] scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-900/70 to-[#f8fbff]" />
+            </div>
+
+            {/* Splash Cursor */}
+            <div className="fixed inset-0 z-[1] pointer-events-none">
+                <SplashCursor />
+            </div>
+            <div className="fixed inset-0 z-[2] bg-white/10 backdrop-blur-[2px] pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col min-h-screen">
+                <Navbar />
+
+                <div className="flex-grow">
+
+
+                {/* Hero Section */}
+                <div className="relative overflow-hidden pt-32 pb-20 text-white shadow-2xl">
+                    {/* Hero Image Background */}
+                    <div className="absolute inset-0 z-0">
+                        <img 
+                            src={datasetBg} 
+                            alt="Datasets" 
+                            className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/80 to-blue-900/40" />
+                        <div className="absolute inset-0 bg-slate-950/20" />
+                    </div>
+
+                    <div className="mx-auto max-w-6xl px-4 relative z-10">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8 }}
                         >
-                            <Upload size={16} />
-                            Upload Dataset
-                        </Link>
-                    </div>
-
-                    {/* Search and Filters */}
-                    <div className="mb-6 flex flex-col md:flex-row gap-4">
-                        <div className="flex-1 flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-100">
-                            <Search size={18} className="shrink-0 text-slate-400" />
-                            <input
-                                type="text"
-                                id="dataset-search"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search by title, description, or tag…"
-                                className="w-full bg-transparent text-slate-700 placeholder:text-slate-400 focus:outline-none"
-                            />
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-4 shrink-0">
-                            <select
-                                value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
-                            >
-                                <option value="all">🌍 All Datasets</option>
-                                {currentUser && <option value="my">👤 My Datasets</option>}
-                            </select>
-
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition"
-                            >
-                                <option value="newest">Newest First</option>
-                                <option value="oldest">Oldest First</option>
-                                <option value="az">A-Z</option>
-                                <option value="za">Z-A</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* States */}
-                    {loading && (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-                        </div>
-                    )}
-
-                    {!loading && error && (
-                        <div className="rounded-xl bg-red-50 p-6 text-center text-red-600 ring-1 ring-red-200">
-                            {error}
-                        </div>
-                    )}
-
-                    {!loading && !error && filtered.length === 0 && (
-                        <div className="rounded-xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-100">
-                            <Database size={40} className="mx-auto mb-3 text-slate-300" />
-                            <p className="font-medium text-slate-500">No datasets found</p>
-                            <p className="mt-1 text-sm text-slate-400">
-                                {search ? "Try a different search term" : "Be the first to upload a dataset!"}
+                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-400 mb-4">
+                                Data-Driven Discovery
                             </p>
-                        </div>
-                    )}
-
-                    {/* Dataset Cards */}
-                    {!loading && !error && filtered.length > 0 && (
-                        <div className="grid gap-5">
-                            {filtered.map((ds) => {
-                                const badge = accessBadge[ds.accessControl] || accessBadge.public;
-                                return (
-                                    <div
-                                        key={ds._id}
-                                        className="group rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md hover:ring-blue-200"
-                                    >
-                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                            {/* Left: info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="mb-2 flex flex-wrap items-center gap-2">
-                                                    <h2 className="text-lg font-bold text-slate-800 truncate">
-                                                        {ds.title}
-                                                    </h2>
-                                                    <span
-                                                        className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}
-                                                    >
-                                                        {badge.icon}
-                                                        {badge.label}
-                                                    </span>
-                                                </div>
-
-                                                {ds.description && (
-                                                    <p className="mb-3 text-sm text-slate-500 line-clamp-2">
-                                                        {ds.description}
-                                                    </p>
-                                                )}
-
-                                                {/* Tags */}
-                                                {ds.tags?.length > 0 && (
-                                                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                                                        <Tag size={13} className="text-slate-400" />
-                                                        {ds.tags.map((tag) => (
-                                                            <span
-                                                                key={tag}
-                                                                className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-600"
-                                                            >
-                                                                {tag}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                {/* Meta */}
-                                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-                                                    <span>
-                                                        By <strong className="text-slate-600">{ds.uploadedBy?.username || "Unknown"}</strong>
-                                                    </span>
-                                                    <span>{formatBytes(ds.fileSize)}</span>
-                                                    <span>{ds.fileName}</span>
-                                                    <span>{new Date(ds.createdAt).toLocaleDateString()}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Right: actions */}
-                                            <div className="flex shrink-0 gap-2 sm:flex-col">
-                                                <button
-                                                    id={`download-${ds._id}`}
-                                                    onClick={() => handleDownload(ds)}
-                                                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
-                                                >
-                                                    <Download size={15} />
-                                                    Download
-                                                </button>
-
-                                                {isOwner(ds) && (
-                                                    <div className="flex flex-col gap-2">
-                                                        <button
-                                                            onClick={() => openEditModal(ds)}
-                                                            className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
-                                                        >
-                                                            <Edit size={15} />
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            id={`delete-${ds._id}`}
-                                                            onClick={() => handleDelete(ds._id)}
-                                                            disabled={deletingId === ds._id}
-                                                            className="flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition disabled:opacity-50"
-                                                        >
-                                                            <Trash2 size={15} />
-                                                            {deletingId === ds._id ? "Deleting…" : "Delete"}
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                            <h1 className="font-serif text-4xl font-semibold leading-tight sm:text-5xl md:text-6xl">
+                                Research <span className="text-blue-400">Datasets</span>
+                            </h1>
+                            <p className="mt-6 max-w-2xl text-lg text-blue-100/80 leading-relaxed font-serif">
+                                Securely share, discover, and download high-quality research data. 
+                                Collaborative intelligence for the modern academic workflow.
+                            </p>
+                            <div className="mt-10 flex flex-wrap gap-4">
+                                <Link
+                                    to="/upload-dataset"
+                                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-blue-900/30 transition hover:bg-blue-500 hover:-translate-y-0.5"
+                                >
+                                    <Upload size={18} />
+                                    Upload New Dataset
+                                </Link>
+                                <div className="flex items-center gap-4 text-blue-200/60 text-sm font-medium">
+                                    <div className="flex -space-x-2">
+                                        {[1, 2, 3].map(i => (
+                                            <div key={i} className="h-8 w-8 rounded-full border-2 border-slate-900 bg-slate-700 flex items-center justify-center text-[10px] font-bold">DS</div>
+                                        ))}
                                     </div>
-                                );
-                            })}
+                                    <span>Used by {datasets.length}+ researchers</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+
+                {/* Filters & Search - Floating Bar */}
+                <div className="mx-auto -mt-10 max-w-6xl px-4 mb-12">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-[28px] border border-white/70 bg-white/85 p-4 shadow-2xl shadow-slate-200/50 backdrop-blur-2xl"
+                    >
+                        <div className="flex flex-col md:flex-row gap-4">
+                            <div className="flex-1 flex items-center gap-3 rounded-full bg-slate-50/50 px-6 py-3.5 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-blue-400 focus-within:bg-white transition-all">
+                                <Search size={20} className="text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search datasets, tags, authors..."
+                                    className="w-full bg-transparent text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                                />
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                <div className="relative group">
+                                    <select
+                                        value={filter}
+                                        onChange={(e) => setFilter(e.target.value)}
+                                        className="appearance-none rounded-full border border-slate-200 bg-white/80 pl-6 pr-12 py-3.5 text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition cursor-pointer hover:bg-slate-50"
+                                    >
+                                        <option value="all">🌍 All Datasets</option>
+                                        {currentUser && <option value="my">👤 My Uploads</option>}
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-blue-500 transition-colors" />
+                                </div>
+                                <div className="relative group">
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="appearance-none rounded-full border border-slate-200 bg-white/80 pl-6 pr-12 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition cursor-pointer hover:bg-slate-50"
+                                    >
+                                        <option value="newest">Newest First</option>
+                                        <option value="oldest">Oldest First</option>
+                                        <option value="az">Name A-Z</option>
+                                        <option value="za">Name Z-A</option>
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-blue-500 transition-colors" />
+                                </div>
+                            </div>
                         </div>
-                    )}
+                    </motion.div>
+                </div>
+
+                {/* Content */}
+                <div className="mx-auto max-w-6xl px-4 pb-24">
+                    <AnimatePresence mode="wait">
+                        {loading ? (
+                            <motion.div 
+                                key="loader"
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                className="flex items-center justify-center py-32"
+                            >
+                                <RefreshCw size={48} className="animate-spin text-blue-600 opacity-20" />
+                            </motion.div>
+                        ) : filtered.length === 0 ? (
+                            <motion.div 
+                                key="empty"
+                                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                                className="rounded-[32px] border border-white/70 bg-white/60 p-20 text-center backdrop-blur-xl shadow-xl"
+                            >
+                                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-blue-50 text-blue-400">
+                                    <Database size={40} />
+                                </div>
+                                <h3 className="text-2xl font-serif font-bold text-slate-800">No Datasets Found</h3>
+                                <p className="mt-2 text-slate-500 max-w-sm mx-auto">
+                                    {search ? "We couldn't find anything matching your search. Try different keywords." : "The dataset library is waiting for its first contribution."}
+                                </p>
+                            </motion.div>
+                        ) : (
+                            <motion.div 
+                                key="list"
+                                variants={staggerContainer}
+                                initial="hidden"
+                                animate="visible"
+                                className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+                            >
+                                {filtered.map((ds) => {
+                                    const badge = accessBadge[ds.accessControl] || accessBadge.public;
+                                    return (
+                                        <motion.div
+                                            key={ds._id}
+                                            variants={fadeUpVariant}
+                                            layout
+                                            whileHover={{ 
+                                                scale: 1.02, 
+                                                y: -10,
+                                                transition: { duration: 0.3, ease: "easeOut" }
+                                            }}
+                                            className="group relative overflow-hidden rounded-[40px] border border-white/60 bg-gradient-to-br from-slate-100/90 to-blue-50/80 p-8 shadow-2xl shadow-slate-200/50 backdrop-blur-3xl transition-all duration-500 hover:from-white hover:to-blue-100/50 hover:shadow-blue-900/10 hover:border-blue-400/50"
+                                        >
+                                            <div className="flex flex-col h-full">
+                                                <div className="mb-4 flex items-start justify-between gap-4">
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 transition-transform group-hover:scale-110">
+                                                        <FileText size={24} />
+                                                    </div>
+                                                    <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${badge.className}`}>
+                                                        {badge.icon} {badge.label}
+                                                    </div>
+                                                </div>
+
+                                                <h3 className="font-serif text-2xl font-black text-slate-950 mb-3 line-clamp-1 group-hover:text-blue-700 transition-colors">
+                                                    {ds.title}
+                                                </h3>
+                                                <p className="text-sm leading-relaxed text-slate-700 font-medium line-clamp-2 mb-6">
+                                                    {ds.description || "No description provided for this research dataset."}
+                                                </p>
+
+                                                <div className="flex flex-wrap gap-2 mb-6 min-h-[24px]">
+                                                    {(ds.tags || []).slice(0, 3).map(tag => (
+                                                        <span key={tag} className="rounded-lg bg-slate-100/50 px-2.5 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-tight transition-colors group-hover:bg-blue-50 group-hover:text-blue-600">
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                    {ds.tags?.length > 3 && <span className="text-[10px] font-bold text-slate-400">+{ds.tags.length - 3}</span>}
+                                                </div>
+
+                                                <div className="mt-auto pt-5 border-t border-slate-100 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-100 flex items-center justify-center text-[10px] font-bold text-blue-700">
+                                                            {ds.uploadedBy?.username?.substring(0, 2).toUpperCase() || "U"}
+                                                        </div>
+                                                        <div className="text-[11px]">
+                                                            <p className="font-black text-slate-900">{ds.uploadedBy?.username || "Researcher"}</p>
+                                                            <p className="text-slate-500 font-bold">{new Date(ds.createdAt).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatBytes(ds.fileSize)}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Action Overlay */}
+                                                <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform bg-white/95 backdrop-blur-md border-t border-slate-100 flex gap-2">
+                                                    <button
+                                                        onClick={() => handleDownload(ds)}
+                                                        className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500 transition"
+                                                    >
+                                                        <Download size={14} /> Download Dataset
+                                                    </button>
+                                                    {isOwner(ds) && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => openEditModal(ds)}
+                                                                className="flex items-center justify-center p-3 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+                                                            >
+                                                                <Edit size={14} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleDelete(ds._id)}
+                                                                className="flex items-center justify-center p-3 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
                 </div>
             </div>
 
-            {/* Edit Modal */}
-            {editingDataset && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/40 backdrop-blur-sm p-4">
-                    <div className="relative w-full max-w-lg rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-slate-100">
-                        <button
-                            onClick={() => setEditingDataset(null)}
-                            className="absolute right-6 top-6 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            {/* Edit Modal - Homepage Style */}
+            <AnimatePresence>
+                {editingDataset && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-xl rounded-[32px] border border-white/70 bg-white/90 p-8 shadow-2xl backdrop-blur-2xl"
                         >
-                            <X size={20} />
-                        </button>
+                            <button
+                                onClick={() => setEditingDataset(null)}
+                                className="absolute right-6 top-6 rounded-full bg-slate-100 p-2 text-slate-400 transition hover:bg-rose-100 hover:text-rose-600"
+                            >
+                                <X size={20} />
+                            </button>
 
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-slate-800">Edit Dataset</h2>
-                        </div>
-
-                        <form onSubmit={handleEditSubmit} className="space-y-5">
-                            <div>
-                                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                                    Title <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="title"
-                                    value={editFormData.title}
-                                    onChange={handleEditChange}
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
-                                    required
-                                />
+                            <div className="mb-8 flex items-center gap-4">
+                                <div className="h-14 w-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                    <Sparkles size={28} />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-serif font-bold text-slate-900">Refine Dataset</h2>
+                                    <p className="text-sm text-slate-500 font-medium">Update metadata and access controls</p>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                                    Description
-                                </label>
-                                <textarea
-                                    name="description"
-                                    value={editFormData.description}
-                                    onChange={handleEditChange}
-                                    rows={3}
-                                    className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                                    Category Tags
-                                </label>
-                                <input
-                                    type="text"
-                                    name="tags"
-                                    value={editFormData.tags}
-                                    onChange={handleEditChange}
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
-                                />
-                                <p className="mt-1 text-xs text-slate-400">Comma-separated</p>
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                                    Download Access
-                                </label>
-                                <select
-                                    name="accessControl"
-                                    value={editFormData.accessControl}
-                                    onChange={handleEditChange}
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
-                                >
-                                    <option value="public">🌍 Public</option>
-                                    <option value="private">🔒 Private</option>
-                                    <option value="restricted">👥 Restricted</option>
-                                </select>
-                            </div>
-
-                            {/* Conditional Restricted Emails Input */}
-                            {editFormData.accessControl === "restricted" && (
-                                <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-5">
-                                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-900">
-                                        <Mail size={15} />
-                                        Allowed Users
-                                    </label>
-                                    <p className="mb-3 text-xs text-blue-700">
-                                        Enter the email addresses of registered users who can download this dataset.
-                                    </p>
-
-                                    <div className="flex gap-2">
+                            <form onSubmit={handleEditSubmit} className="space-y-6">
+                                <div className="grid gap-6 md:grid-cols-2">
+                                    <div className="md:col-span-2">
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Dataset Title</label>
                                         <input
-                                            type="email"
-                                            value={editEmailInput}
-                                            onChange={(e) => setEditEmailInput(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter") {
-                                                    e.preventDefault();
-                                                    handleEditAddEmail(e);
-                                                }
-                                            }}
-                                            placeholder="colleague@university.edu"
-                                            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                            type="text"
+                                            name="title"
+                                            value={editFormData.title}
+                                            onChange={(e) => setEditFormData({...editFormData, title: e.target.value})}
+                                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                            required
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={handleEditAddEmail}
-                                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                        >
-                                            Add
-                                        </button>
                                     </div>
+                                    <div className="md:col-span-2">
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Description</label>
+                                        <textarea
+                                            value={editFormData.description}
+                                            onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                                            rows={3}
+                                            className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Access Control</label>
+                                        <div className="relative group">
+                                            <select
+                                                value={editFormData.accessControl}
+                                                onChange={(e) => setEditFormData({...editFormData, accessControl: e.target.value})}
+                                                className="appearance-none w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer"
+                                            >
+                                                <option value="public">🌍 Public</option>
+                                                <option value="private">🔒 Private</option>
+                                                <option value="restricted">👥 Restricted</option>
+                                            </select>
+                                            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Tags (comma-separated)</label>
+                                        <input
+                                            type="text"
+                                            value={editFormData.tags}
+                                            onChange={(e) => setEditFormData({...editFormData, tags: e.target.value})}
+                                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                        />
+                                    </div>
+                                </div>
 
-                                    {editAllowedEmails.length > 0 && (
-                                        <div className="mt-4 flex flex-wrap gap-2">
-                                            {editAllowedEmails.map((email) => (
-                                                <span
-                                                    key={email}
-                                                    className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200"
-                                                >
+                                {editFormData.accessControl === "restricted" && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
+                                        <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-blue-900">Whitelisted Emails</label>
+                                        <div className="flex gap-2 mb-4">
+                                            <input
+                                                type="email"
+                                                value={editEmailInput}
+                                                onChange={(e) => setEditEmailInput(e.target.value)}
+                                                placeholder="Enter researcher email..."
+                                                className="flex-1 rounded-xl border border-blue-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                            />
+                                            <button type="button" onClick={handleEditAddEmail} className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700 transition">Add</button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {editAllowedEmails.map(email => (
+                                                <span key={email} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm border border-slate-200">
                                                     {email}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleEditRemoveEmail(email)}
-                                                        className="ml-1 rounded-full p-0.5 text-slate-400 hover:bg-slate-100 hover:text-red-500"
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
+                                                    <button type="button" onClick={() => setEditAllowedEmails(editAllowedEmails.filter(e => e !== email))} className="text-slate-400 hover:text-rose-500"><X size={12}/></button>
                                                 </span>
                                             ))}
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    </motion.div>
+                                )}
 
-                            {editError && (
-                                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                                    {editError}
+                                <div className="pt-4 flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingDataset(null)}
+                                        className="flex-1 rounded-2xl border border-slate-200 px-6 py-4 text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
+                                    >
+                                        Dismiss
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isEditing}
+                                        className="flex-[2] rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:from-blue-500 hover:to-indigo-600 transition disabled:opacity-50"
+                                    >
+                                        {isEditing ? "Optimizing..." : "Save Metadata"}
+                                    </button>
                                 </div>
-                            )}
-
-                            <div className="mt-6 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingDataset(null)}
-                                    className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isEditing}
-                                    className="flex w-32 items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition disabled:opacity-60"
-                                >
-                                    {isEditing ? "Saving…" : "Save Changes"}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
 
 export default DatasetList;
+
