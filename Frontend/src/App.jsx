@@ -28,6 +28,8 @@ import EditEquipment from "./pages/EditEquipment";
 import EquipmentBookings from "./pages/EquipmentBookings";
 import EquipmentDetail from "./pages/EquipmentDetail";
 import ListEquipment from "./pages/ListEquipment";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 
 import {
   ChatSidebarProvider,
@@ -41,7 +43,7 @@ import FloatingAIChatbot from "./components/FloatingAIChatbot";
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/home" element={<Home />} />
@@ -72,6 +74,8 @@ function AppRoutes() {
       <Route path="/equipment/edit/:id" element={<EditEquipment />} />
       <Route path="/equipment/my-bookings" element={<EquipmentBookings />} />
       <Route path="/equipment/:id" element={<EquipmentDetail />} />
+      <Route path="/equipment/booking/payment-success" element={<PaymentSuccess />} />
+      <Route path="/equipment/booking/payment-cancel" element={<PaymentCancel />} />
     </Routes>
   );
 }

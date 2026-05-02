@@ -1,5 +1,7 @@
 import Equipment from "../models/Equipment.js";
 import EquipmentBooking from "../models/EquipmentBooking.js";
+import EquipmentReview from "../models/EquipmentReview.js";
+import mongoose from "mongoose";
 
 // ─── EQUIPMENT CRUD ──────────────────────────────────────────────────────────
 
@@ -488,4 +490,280 @@ export const getEquipmentApprovedDates = async (req, res) => {
     console.error("getEquipmentApprovedDates:", err.message);
     res.status(500).json({ message: err.message });
   }
+};
+
+export const initiatePayment = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    console.log("--- Payment Initiation Start ---");
+    console.log("Booking ID:", bookingId);
+
+    if (!process.env.RUPANTORPAY_API_KEY || !process.env.RUPANTORPAY_URL) {
+      console.error("Payment Error: RupantorPay configuration missing in .env");
+      console.log("Available Env Vars:", Object.keys(process.env).filter(k => k.includes("RUPANTORPAY")));
+      return res.status(500).json({ message: "Payment gateway not configured" });
+    }
+
+    const booking = await EquipmentBooking.findById(bookingId).populate("equipment requester");
+    if (!booking) {
+      console.error("Booking not found:", bookingId);
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    console.log("Booking Status:", booking.status);
+    console.log("Requester ID:", booking.requester?._id);
+    console.log("User ID:", req.user?._id);
+
+    if (booking.requester._id.toString() !== req.user._id.toString())
+      return res.status(403).json({ message: "Not authorized to pay for this booking" });
+
+    if (booking.status !== "approved" && booking.status !== "pending_payment")
+      return res.status(400).json({ message: "Booking must be approved before payment" });
+
+    if (booking.paymentStatus === "paid")
+      return res.status(400).json({ message: "Booking is already paid" });
+
+    const amount = booking.totalCost;
+    if (!amount || amount <= 0) {
+      booking.paymentStatus = "paid";
+      await booking.save();
+      return res.json({ message: "No payment required for this booking", status: "paid" });
+    }
+
+    const payload = {
+      amount: amount.toString(),
+      success_url: `${process.env.FRONTEND_URL}/equipment/booking/payment-success?bookingId=${booking._id}`,
+      cancel_url: `${process.env.FRONTEND_URL}/equipment/booking/payment-cancel?bookingId=${booking._id}`,
+      webhook_url: `${process.env.BACKEND_URL}/api/equipment/bookings/verify`,
+      fullname: booking.requester.username,
+      email: booking.requester.email,
+      sandbox: 1, // Enable Sandbox / Test Mode
+      metadata: {
+        bookingId: booking._id.toString(),
+        equipmentId: booking.equipment._id.toString(),
+      },
+    };
+
+    console.log("Initiating payment for booking:", bookingId, "Amount:", amount);
+
+    let hostname = "localhost";
+    try {
+      if (process.env.FRONTEND_URL) {
+        hostname = new URL(process.env.FRONTEND_URL).hostname;
+      }
+    } catch (e) {
+      console.warn("Invalid FRONTEND_URL for hostname extraction, using localhost");
+    }
+
+    const response = await fetch(process.env.RUPANTORPAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": process.env.RUPANTORPAY_API_KEY,
+        "X-CLIENT": hostname,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    console.log("RupantorPay Response Data:", JSON.stringify(data, null, 2));
+
+    if (data.status === 1 || data.status === true || data.payment_url) {
+      booking.paymentUrl = data.payment_url;
+      booking.status = "pending_payment";
+      await booking.save();
+      console.log("Payment URL generated successfully:", data.payment_url);
+      res.json({ payment_url: data.payment_url });
+    } else {
+      console.error("RupantorPay API rejected request:", data);
+      res.status(400).json({ message: data.message || "Failed to initiate payment" });
+    }
+  } catch (err) {
+    console.error("CRITICAL ERROR in initiatePayment:", err.stack);
+    res.status(500).json({ message: "Internal server error: " + err.message });
+  }
+};
+
+export const verifyPayment = async (req, res) => {
+  try {
+    const transaction_id = req.query.transaction_id || req.body.transaction_id || req.body.tran_id;
+    const bookingId = req.query.bookingId || (req.body.metadata && req.body.metadata.bookingId) || req.body.value_a;
+    
+    if (!transaction_id) {
+      console.log("Verify Payment: No transaction ID found", req.query, req.body);
+      return res.status(400).json({ message: "Transaction ID is required" });
+    }
+
+    const response = await fetch(`${process.env.RUPANTORPAY_VERIFY_URL}?transaction_id=${transaction_id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": process.env.RUPANTORPAY_API_KEY,
+      },
+    });
+
+    const data = await response.json();
+    console.log("RupantorPay Verification Data:", data);
+
+    // Common status fields for RupantorPay: status: 1 or status: "success" or payment_status: "Completed"
+    const isSuccess = data.status === 1 || data.status === "success" || data.payment_status === "Completed" || data.status === "Completed";
+
+    if (isSuccess) {
+      const bId = bookingId || (data.metadata && data.metadata.bookingId);
+      if (!bId) {
+        console.error("Booking ID not found in data:", data);
+        return res.status(400).json({ message: "Booking ID not found in transaction" });
+      }
+
+      const booking = await EquipmentBooking.findById(bId);
+      if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+      booking.paymentStatus = "paid";
+      booking.status = "approved"; // Ensure it stays/becomes approved
+      booking.transactionId = transaction_id;
+      booking.paymentDetails = data;
+      await booking.save();
+      
+      res.json({ message: "Payment verified successfully", booking });
+    } else {
+      res.status(400).json({ message: "Payment verification failed", details: data });
+    }
+  } catch (err) {
+    console.error("verifyPayment Error:", err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+
+export const addReview = async (req, res) => {
+    try {
+        const id = req.params.id || req.params.equipmentId;
+        const { rating, comment } = req.body;
+        const userId = req.user._id;
+
+        console.log("AddReview Params:", req.params);
+        console.log("AddReview Body:", req.body);
+
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid equipment ID" });
+        }
+
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({ message: "Rating must be between 1 and 5" });
+        }
+
+        const equipment = await Equipment.findById(id);
+        if (!equipment) {
+            return res.status(404).json({ message: "Equipment not found" });
+        }
+
+        // Use findOneAndUpdate with upsert to handle both create and update
+        const review = await EquipmentReview.findOneAndUpdate(
+            { equipment: id, user: userId },
+            { rating, comment: comment || "" },
+            { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
+        ).populate("user", "username email");
+
+        res.status(201).json({
+            message: "Review submitted successfully",
+            review: review,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET EQUIPMENT REVIEWS
+export const getEquipmentReviews = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid equipment ID" });
+        }
+
+        const reviews = await EquipmentReview.find({ equipment: id })
+            .populate("user", "username email")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(reviews);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// UPDATE REVIEW BY ID
+export const updateReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rating, comment } = req.body;
+        const userId = req.user._id;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid review ID" });
+        }
+
+        const review = await EquipmentReview.findById(id);
+
+        if (!review) {
+            return res.status(404).json({ message: "Review not found" });
+        }
+
+        // Authorization check
+        if (review.user.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "Not authorized to edit this review" });
+        }
+
+        if (rating !== undefined) {
+            if (rating < 1 || rating > 5) {
+                return res.status(400).json({ message: "Rating must be between 1 and 5" });
+            }
+            review.rating = rating;
+        }
+
+        if (comment !== undefined) {
+            review.comment = comment;
+        }
+
+        await review.save();
+
+        const populatedReview = await EquipmentReview.findById(review._id).populate("user", "username email");
+
+        res.status(200).json({
+            message: "Review updated successfully",
+            review: populatedReview,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// DELETE REVIEW BY ID
+export const deleteReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user._id;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid review ID" });
+        }
+
+        const review = await EquipmentReview.findById(id);
+
+        if (!review) {
+            return res.status(404).json({ message: "Review not found" });
+        }
+
+        // Authorization check
+        if (review.user.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "Not authorized to delete this review" });
+        }
+
+        await EquipmentReview.findByIdAndDelete(id);
+
+        res.status(200).json({ message: "Review deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };

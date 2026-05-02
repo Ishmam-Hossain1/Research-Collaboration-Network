@@ -18,9 +18,21 @@ import {
   getOwnerBookingsDashboard,
   getEquipmentUsageHistory,
   getEquipmentApprovedDates,
+  initiatePayment,
+  verifyPayment,
+  addReview,
+  getEquipmentReviews,
+  updateReview,
+  deleteReview,
 } from "../controllers/equipmentController.js";
 
 const router = express.Router();
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+router.get("/:id/reviews", getEquipmentReviews);
+router.post("/:id/reviews", protect, addReview);
+router.put("/reviews/:id", protect, updateReview);
+router.delete("/reviews/:id", protect, deleteReview);
 
 // ── Equipment CRUD ────────────────────────────────────────────────────────────
 router.get("/", optionalProtect, getAllEquipment);
@@ -49,6 +61,11 @@ router.put("/bookings/:bookingId/reject", protect, rejectBooking);
 router.put("/bookings/:bookingId/cancel", protect, cancelBooking);
 router.put("/bookings/:bookingId/complete", protect, completeBooking);
 router.put("/bookings/:bookingId/rate", protect, rateBooking);
+
+// ── Payment ──────────────────────────────────────────────────────────────────
+router.post("/bookings/:bookingId/pay", protect, initiatePayment);
+router.get("/bookings/verify", optionalProtect, verifyPayment); // Verification callback
+router.post("/bookings/verify", optionalProtect, verifyPayment); // Webhook
 
 // Compatibility aliases for booking actions
 router.post("/bookings/:bookingId/approve", protect, approveBooking);
