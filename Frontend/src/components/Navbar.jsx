@@ -1,8 +1,7 @@
-
-
-import { Bell, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useChatSidebar } from "../context/ChatSidebarContext";
+import NotificationBell from "./NotificationBell"; // ✅ added
 
 const Navbar = () => {
   const user = JSON.parse(localStorage.getItem("researchConnectUser"));
@@ -26,8 +25,6 @@ const Navbar = () => {
       <div className="logo">RESEARCH CONNECT</div>
 
       <nav className="nav-links">
-
-
         <Link to="/home">Home</Link>
         <Link to="/researchers">Collaborate</Link>
 
@@ -37,16 +34,14 @@ const Navbar = () => {
 
         <Link to="/datasets">Datasets</Link>
         <Link to="/funding">Funding</Link>
-
-        <a href="#">Conference</a>
+        <Link to="/conferences">Conferences</Link>
         <a href="#">Equipment</a>
       </nav>
 
       <div className="nav-icons">
-        <Bell size={20} />
-       
+        {/* ✅ replaced Bell */}
+        <NotificationBell />
 
-        {/* ✅ Chat toggle */}
         <MessageCircle
           size={20}
           className="cursor-pointer hover:text-blue-600 transition"
@@ -68,6 +63,5 @@ const Navbar = () => {
     </header>
   );
 };
-
 
 export default Navbar;

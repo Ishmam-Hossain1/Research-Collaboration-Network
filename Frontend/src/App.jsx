@@ -15,7 +15,9 @@ import Funding from "./pages/Funding";
 import CreateFunding from "./pages/CreateFunding";
 import EditFunding from "./pages/EditFunding";
 import ProjectDetails from "./pages/ProjectDetails";
-import MilestonesPage from './pages/MilestonesPage';
+import MilestonesPage from "./pages/MilestonesPage";
+import Conferences from "./pages/Conferences";
+
 import {
   ChatSidebarProvider,
   useChatSidebar,
@@ -47,6 +49,27 @@ function AppRoutes() {
       <Route path="/funding/new" element={<CreateFunding />} />
       <Route path="/funding/edit/:id" element={<EditFunding />} />
       <Route path="/projects/:id/milestones" element={<MilestonesPage />} />
+
+      {/* ✅ Conferences Page */}
+      <Route path="/conferences" element={<Conferences />} />
+
+      {/* ✅ Google Calendar Success Page */}
+      <Route
+        path="/calendar-connected"
+        element={
+          <div className="min-h-screen flex items-center justify-center bg-slate-50">
+            <div className="rounded-3xl bg-white p-8 shadow border">
+              <h1 className="text-2xl font-bold text-slate-900">
+                Google Calendar Connected
+              </h1>
+              <p className="mt-2 text-slate-600">
+                You can now add academic conferences and deadlines to your
+                calendar.
+              </p>
+            </div>
+          </div>
+        }
+      />
     </Routes>
   );
 }

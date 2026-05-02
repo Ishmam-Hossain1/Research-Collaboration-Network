@@ -138,6 +138,9 @@ import feedbackRoutes from "./routes/feedbackRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import milestoneRoutes from "./routes/milestoneRoutes.js";
+import conferenceRoutes from "./routes/conferenceRoutes.js";
+import googleCalendarRoutes from "./routes/googleCalendarRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 dotenv.config();
 
@@ -211,6 +214,9 @@ app.use("/api/feedback", feedbackRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/milestones", milestoneRoutes);
+app.use("/api/conferences", conferenceRoutes);
+app.use("/api/google-calendar", googleCalendarRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Default route
 app.get("/", (req, res) => {

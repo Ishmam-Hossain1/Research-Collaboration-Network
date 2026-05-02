@@ -25,26 +25,12 @@ const RESEARCH_FIELDS = [
   "Other",
 ];
 
-const STATUS_OPTIONS = [
-  {
-    value: "ongoing",
-    title: "Ongoing",
-    description: "Work is currently in progress",
-  },
-  {
-    value: "completed",
-    title: "Completed",
-    description: "Project work has been finished",
-  },
-];
-
 const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
   const [formData, setFormData] = useState({
     title: "",
     abstract: "",
     researchField: "",
     status: "ongoing",
-    progress: 25,
     objective: "",
     methodology: "",
     expectedOutcome: "",
@@ -72,7 +58,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
 
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "progress" ? Number(value) : value,
+      [name]: value,
     }));
   };
 
@@ -128,7 +114,6 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       abstract: "",
       researchField: "",
       status: "ongoing",
-      progress: 25,
       objective: "",
       methodology: "",
       expectedOutcome: "",
@@ -167,11 +152,6 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       return;
     }
 
-    if (formData.progress < 0 || formData.progress > 100) {
-      alert("Progress must be between 0 and 100");
-      return;
-    }
-
     if (
       formData.startDate &&
       formData.endDate &&
@@ -188,8 +168,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
         title: formData.title.trim(),
         abstract: formData.abstract.trim(),
         researchField: formData.researchField.trim(),
-        status: formData.status,
-        progress: Number(formData.progress),
+        status: "ongoing",
         objective: formData.objective.trim(),
         methodology: formData.methodology.trim(),
         expectedOutcome: formData.expectedOutcome.trim(),
@@ -206,10 +185,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
       onProjectCreated?.(res.data.project);
       onClose();
     } catch (error) {
-      console.error(
-        "Create project error:",
-        error.response?.data || error.message
-      );
+      console.error("Create project error:", error.response?.data || error.message);
 
       if (error.response?.status === 401) {
         alert("Your session has expired or you are not logged in. Please log in again.");
@@ -429,77 +405,18 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                   <div className="mb-4 flex items-center gap-2">
                     <Target size={18} className="text-blue-600" />
                     <h3 className="text-lg font-semibold text-slate-900">
-                      Status & Timeline
+                      Timeline & Funding
                     </h3>
                   </div>
 
                   <div className="space-y-5">
-                    <div className="space-y-3">
-                      {STATUS_OPTIONS.map((option) => {
-                        const active = formData.status === option.value;
-
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                status: option.value,
-                                progress:
-                                  option.value === "completed"
-                                    ? Math.max(prev.progress, 100)
-                                    : prev.progress === 100
-                                    ? 75
-                                    : prev.progress,
-                              }))
-                            }
-                            className={`w-full rounded-2xl border p-4 text-left transition ${
-                              active
-                                ? "border-blue-600 bg-blue-50 ring-4 ring-blue-100"
-                                : "border-slate-300 bg-white hover:border-blue-300"
-                            }`}
-                          >
-                            <div className="font-semibold text-slate-900">
-                              {option.title}
-                            </div>
-                            <div className="mt-1 text-sm text-slate-500">
-                              {option.description}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div>
-                      <div className="mb-2 flex items-center justify-between">
-                        <label className="block text-sm font-semibold text-slate-700">
-                          Progress
-                        </label>
-                        <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700">
-                          {formData.progress}%
-                        </span>
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                      <div className="font-semibold text-slate-900">
+                        Project progress is automatic
                       </div>
-
-                      <input
-                        type="range"
-                        name="progress"
-                        min="0"
-                        max="100"
-                        value={formData.progress}
-                        onChange={handleChange}
-                        className="h-2 w-full cursor-pointer rounded-lg bg-slate-200"
-                      />
-
-                      <input
-                        type="number"
-                        name="progress"
-                        min="0"
-                        max="100"
-                        value={formData.progress}
-                        onChange={handleChange}
-                        className="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                      />
+                      <div className="mt-1 text-sm text-slate-600">
+                        Progress will start at 0% and update automatically as milestones are completed.
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -623,7 +540,7 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                         {formData.researchField || "Research Field"}
                       </span>
                       <span className="text-sm capitalize text-slate-500">
-                        {formData.status}
+                        ongoing
                       </span>
                     </div>
 
@@ -649,17 +566,8 @@ const CreateProjectModal = ({ isOpen, onClose, onProjectCreated }) => {
                       </div>
                     ) : null}
 
-                    <div className="mt-4">
-                      <div className="mb-1 flex items-center justify-between text-sm text-slate-500">
-                        <span>Progress</span>
-                        <span>{formData.progress}%</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-slate-200">
-                        <div
-                          className="h-2 rounded-full bg-blue-600 transition-all"
-                          style={{ width: `${formData.progress}%` }}
-                        />
-                      </div>
+                    <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600">
+                      Progress will be calculated automatically from completed milestones.
                     </div>
                   </div>
                 </section>
