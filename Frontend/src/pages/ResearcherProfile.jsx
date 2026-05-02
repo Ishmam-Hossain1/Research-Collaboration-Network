@@ -13,10 +13,7 @@ import {
   Globe,
   BriefcaseBusiness,
   FolderKanban,
-  UserPlus,
-  UserMinus,
   MessageCircle,
-  X,
 } from "lucide-react";
 
 import Navbar from "../components/Navbar";
@@ -43,11 +40,6 @@ export default function ResearcherProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [sendingRequest, setSendingRequest] = useState(false);
-  const [cancellingRequest, setCancellingRequest] = useState(false);
-  const [removingCollaborator, setRemovingCollaborator] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
-  const [alreadyCollaborators, setAlreadyCollaborators] = useState(false);
   const [openingChat, setOpeningChat] = useState(false);
 
   const [toast, setToast] = useState({
@@ -87,23 +79,6 @@ export default function ResearcherProfile() {
 
         setProfile(profileRes.data);
 
-        const requestedCollaborations =
-          profileRes.data.requestedCollaborations || [];
-
-        if (storedUser?.id && requestedCollaborations.includes(storedUser.id)) {
-          setRequestSent(true);
-        }
-
-        const collaborators = profileRes.data.collaborators || [];
-        const isAlreadyCollaborator = collaborators.some(
-          (collaborator) => collaborator._id === storedUser?.id
-        );
-
-        if (isAlreadyCollaborator) {
-          setAlreadyCollaborators(true);
-          setRequestSent(false);
-        }
-
         try {
           const projectsRes = await axios.get(
             `http://localhost:5000/api/projects/user/${id}`
@@ -127,146 +102,7 @@ export default function ResearcherProfile() {
     };
 
     fetchProfile();
-  }, [id, storedUser?.id]);
-
-  const handleRequestCollaboration = async () => {
-    if (!storedUser?.id) {
-      showToast("Please log in first", "error");
-      return;
-    }
-
-    try {
-      setSendingRequest(true);
-
-      const res = await axios.post(
-        "http://localhost:5000/api/users/collaboration-request",
-        {
-          fromUserId: storedUser.id,
-          toUserId: id,
-        }
-      );
-
-      setRequestSent(true);
-      setAlreadyCollaborators(false);
-
-      showToast(
-        res.data.message || "Collaboration request sent successfully",
-        "success"
-      );
-
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              requestedCollaborations: [
-                ...(prev.requestedCollaborations || []),
-                storedUser.id,
-              ],
-            }
-          : prev
-      );
-    } catch (err) {
-      console.error("Failed to send collaboration request", err);
-      showToast(
-        err.response?.data?.message || "Failed to send collaboration request",
-        "error"
-      );
-    } finally {
-      setSendingRequest(false);
-    }
-  };
-
-  const handleCancelSentRequest = async () => {
-    if (!storedUser?.id) {
-      showToast("Please log in first", "error");
-      return;
-    }
-
-    try {
-      setCancellingRequest(true);
-
-      await axios.post(
-        "http://localhost:5000/api/users/collaboration-request/cancel",
-        {
-          fromUserId: storedUser.id,
-          toUserId: id,
-        }
-      );
-
-      setRequestSent(false);
-      setAlreadyCollaborators(false);
-
-      showToast("Collaboration request cancelled successfully", "success");
-
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              requestedCollaborations: (
-                prev.requestedCollaborations || []
-              ).filter((userId) => userId !== storedUser.id),
-            }
-          : prev
-      );
-    } catch (err) {
-      console.error("Failed to cancel collaboration request", err);
-      showToast(
-        err.response?.data?.message || "Failed to cancel collaboration request",
-        "error"
-      );
-    } finally {
-      setCancellingRequest(false);
-    }
-  };
-
-  const handleRemoveCollaborator = async () => {
-    if (!storedUser?.id) {
-      showToast("Please log in first", "error");
-      return;
-    }
-
-    try {
-      setRemovingCollaborator(true);
-
-      const res = await axios.post(
-        "http://localhost:5000/api/users/remove-collaborator",
-        {
-          currentUserId: storedUser.id,
-          collaboratorUserId: id,
-        }
-      );
-
-      setAlreadyCollaborators(false);
-      setRequestSent(false);
-
-      showToast(
-        res.data.message || "Collaborator removed successfully",
-        "success"
-      );
-
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              collaborators: (prev.collaborators || []).filter(
-                (collaborator) => collaborator._id !== storedUser.id
-              ),
-              requestedCollaborations: (
-                prev.requestedCollaborations || []
-              ).filter((userId) => userId !== storedUser.id),
-            }
-          : prev
-      );
-    } catch (err) {
-      console.error("Failed to remove collaborator", err);
-      showToast(
-        err.response?.data?.message || "Failed to remove collaborator",
-        "error"
-      );
-    } finally {
-      setRemovingCollaborator(false);
-    }
-  };
+  }, [id]);
 
   const handleOpenChat = async () => {
     if (!storedUser?.id) {
@@ -327,19 +163,6 @@ export default function ResearcherProfile() {
     }
   };
 
-  const handleMainButtonClick = () => {
-    if (alreadyCollaborators) {
-      handleRemoveCollaborator();
-      return;
-    }
-
-    if (requestSent) {
-      return;
-    }
-
-    handleRequestCollaboration();
-  };
-
   const displayName = profile?.username || "";
   const email = profile?.email || "";
   const collaborators = profile?.collaborators || [];
@@ -351,31 +174,6 @@ export default function ResearcherProfile() {
     : "";
 
   const isOwnProfile = storedUser?.id === id;
-
-  const collaborateDisabled =
-    sendingRequest ||
-    cancellingRequest ||
-    removingCollaborator ||
-    requestSent ||
-    isOwnProfile;
-
-  const collaborateText = isOwnProfile
-    ? "This is you"
-    : alreadyCollaborators
-    ? removingCollaborator
-      ? "Removing..."
-      : "Remove Collaborator"
-    : sendingRequest
-    ? "Sending..."
-    : requestSent
-    ? "Requested"
-    : "Collaborate";
-
-  const collaborateIcon = alreadyCollaborators ? (
-    <UserMinus size={16} />
-  ) : (
-    <UserPlus size={16} />
-  );
 
   return (
     <div className="min-h-screen bg-[#f5f7fb] text-slate-900">
@@ -909,30 +707,29 @@ export default function ResearcherProfile() {
         `}
       </style>
 
-
-    {toast.show && (
-      <div className="pointer-events-none fixed left-1/2 top-24 z-[9999] -translate-x-1/2 px-4">
-        <div
-          className={`animate-toast-center-pop flex items-center gap-3 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-bold shadow-2xl ring-1 backdrop-blur-md ${
-            toast.type === "success"
-              ? "bg-white/95 text-emerald-700 ring-emerald-200"
-              : "bg-white/95 text-red-700 ring-red-200"
-          }`}
-        >
-          <span
-            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+      {toast.show && (
+        <div className="pointer-events-none fixed left-1/2 top-24 z-[9999] -translate-x-1/2 px-4">
+          <div
+            className={`animate-toast-center-pop flex items-center gap-3 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-bold shadow-2xl ring-1 backdrop-blur-md ${
               toast.type === "success"
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-red-100 text-red-700"
+                ? "bg-white/95 text-emerald-700 ring-emerald-200"
+                : "bg-white/95 text-red-700 ring-red-200"
             }`}
           >
-            {toast.type === "success" ? "✓" : "!"}
-          </span>
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                toast.type === "success"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {toast.type === "success" ? "✓" : "!"}
+            </span>
 
-          <span>{toast.message}</span>
+            <span>{toast.message}</span>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
       <main className="profile-page-enter">
         <section
@@ -958,26 +755,10 @@ export default function ResearcherProfile() {
 
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-200 sm:text-lg">
                 View their expertise, research interests, collaborators, and
-                projects before starting a new collaboration.
+                projects before starting a new project collaboration.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleMainButtonClick}
-                  disabled={collaborateDisabled}
-                  className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold shadow-xl transition ${
-                    alreadyCollaborators && !removingCollaborator
-                      ? "border border-white bg-transparent text-white hover:-translate-y-0.5 hover:bg-white/10"
-                      : collaborateDisabled
-                      ? "cursor-default bg-slate-300 text-slate-600"
-                      : "bg-white text-slate-950 hover:-translate-y-0.5 hover:bg-sky-50"
-                  }`}
-                >
-                  {collaborateIcon}
-                  {collaborateText}
-                </button>
-
                 <button
                   type="button"
                   onClick={handleOpenChat}
@@ -989,18 +770,6 @@ export default function ResearcherProfile() {
                   <MessageCircle size={17} />
                   <span>{openingChat ? "Opening..." : "Message"}</span>
                 </button>
-
-                {requestSent && !alreadyCollaborators && !isOwnProfile && (
-                  <button
-                    type="button"
-                    onClick={handleCancelSentRequest}
-                    disabled={cancellingRequest}
-                    className="inline-flex items-center gap-2 rounded-full border border-white bg-transparent px-5 py-3 text-sm font-bold text-white shadow-xl transition hover:-translate-y-0.5 hover:bg-white/10 disabled:cursor-default disabled:opacity-60"
-                  >
-                    <X size={16} />
-                    {cancellingRequest ? "Cancelling..." : "Cancel Request"}
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -1025,7 +794,7 @@ export default function ResearcherProfile() {
                 <FeatureCard
                   icon={BriefcaseBusiness}
                   title="Collaboration ready"
-                  text="Understand what they can contribute to research work."
+                  text="Visit project details to request project collaboration."
                 />
               </div>
 
@@ -1238,7 +1007,9 @@ export default function ResearcherProfile() {
                             </div>
 
                             <div className="mb-4 min-w-0 overflow-hidden">
-                              <div className="solu_meta">Research Connect Project</div>
+                              <div className="solu_meta">
+                                Research Connect Project
+                              </div>
                               <div className="solu_title">
                                 <div>{projectTitle}</div>
                               </div>
