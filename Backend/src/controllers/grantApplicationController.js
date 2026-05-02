@@ -41,12 +41,23 @@ export const submitGrantApplication = async (req, res) => {
     const existingApplication = await GrantApplication.findOne({
       fundingOpportunity,
       applicant: req.user._id,
-      status: { $in: ["submitted", "under_review"] },
+      status: { $in: ["submitted", "under_review", "approved"] },
     });
 
     if (existingApplication) {
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+
+      if (existingApplication.status === "approved") {
+        return res.status(400).json({
+          message:
+            "Your application for this funding opportunity has already been approved. You cannot apply again.",
+        });
+      }
+
       return res.status(400).json({
-        message: "You have already applied for this funding opportunity",
+        message: "You already have an active application for this funding opportunity.",
       });
     }
 

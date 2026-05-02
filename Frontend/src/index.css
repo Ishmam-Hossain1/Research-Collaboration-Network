@@ -1505,6 +1505,11 @@ body {
   background-repeat: no-repeat;
 }
 
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
 
 .scroll-list-container {
   position: relative;
@@ -1636,6 +1641,9 @@ body {
   }
 }
 
+.fade-up {
+  animation: fadeUp 0.6s ease-out both;
+}
 @keyframes profileCardReveal {
   from {
     opacity: 0;
