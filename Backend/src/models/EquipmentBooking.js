@@ -34,8 +34,25 @@ const equipmentBookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "cancelled", "completed"],
+      enum: ["pending", "approved", "rejected", "cancelled", "completed", "pending_payment"],
       default: "pending",
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "failed", "refunded"],
+      default: "unpaid",
+    },
+    transactionId: {
+      type: String,
+      default: "",
+    },
+    paymentUrl: {
+      type: String,
+      default: "",
+    },
+    paymentDetails: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     ownerNotes: {
       type: String,

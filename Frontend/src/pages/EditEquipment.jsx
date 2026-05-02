@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
+import SplashCursor from "../components/SplashCursor";
 import {
   ArrowLeft, Plus, X, Cpu, AlertTriangle, CheckCircle, Info, Save,
+  Zap, MapPin, Layers, Clock, ShieldCheck, Tag, Gift, Calendar, RefreshCw, ChevronDown
 } from "lucide-react";
 
 const API = "http://localhost:5000";
@@ -12,7 +15,20 @@ const CATEGORIES = [
   "Microscopy", "Spectroscopy", "Chromatography", "Computing",
   "Imaging", "Electronics", "Biology", "Chemistry", "Physics", "Other",
 ];
+
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function Field({ label, required, hint, children }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-bold uppercase tracking-widest text-slate-400 block ml-1">
+        {label} {required && <span className="text-rose-500">*</span>}
+      </label>
+      {children}
+      {hint && <p className="text-[10px] text-slate-400 font-medium ml-1 leading-relaxed">{hint}</p>}
+    </div>
+  );
+}
 
 const EditEquipment = () => {
   const navigate = useNavigate();
@@ -22,16 +38,20 @@ const EditEquipment = () => {
   const [availabilitySchedule, setAvailabilitySchedule] = useState([]);
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
   const [blockedDates, setBlockedDates] = useState([]);
-  const [newBlock, setNewBlock] = useState({ start: "", end: "", reason: "Unavailable" });
+  const [newBlock, setNewBlock] = useState({ start: "", end: "", reason: "Maintenance" });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const currentUser = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("researchConnectUser") || "null"); }
+    catch { return null; }
+  }, []);
+  
   const token = localStorage.getItem("researchConnectToken");
-  const authHeaders = { Authorization: `Bearer ${token}` };
-  const currentUser = JSON.parse(localStorage.getItem("researchConnectUser") || "null");
+  const authHeaders = useMemo(() => (token ? { Authorization: `Bearer ${token}` } : {}), [token]);
 
   useEffect(() => {
     if (!currentUser || !token) { navigate("/login"); return; }
@@ -58,16 +78,16 @@ const EditEquipment = () => {
         setBlockedDates((eq.blockedDates || []).map((b) => ({
           start: b.start?.split("T")[0] || "",
           end: b.end?.split("T")[0] || "",
-          reason: b.reason || "Unavailable",
+          reason: b.reason || "Maintenance",
         })));
       } catch (err) {
-        setError("Failed to load equipment.");
+        setError("Could not retrieve asset data for editing.");
       } finally {
         setLoading(false);
       }
     };
     fetch();
-  }, [id, navigate, token, currentUser]);
+  }, [id, navigate, token, currentUser, authHeaders]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -76,7 +96,7 @@ const EditEquipment = () => {
   };
 
   const addSlot = () => {
-    if (newSlot.startTime >= newSlot.endTime) { setError("Start time must be before end time."); return; }
+    if (newSlot.startTime >= newSlot.endTime) { setError("Operational start must precede end time."); return; }
     setAvailabilitySchedule((p) => [...p, { ...newSlot, dayOfWeek: parseInt(newSlot.dayOfWeek) }]);
     setNewSlot({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
     setError("");
@@ -84,10 +104,10 @@ const EditEquipment = () => {
   const removeSlot = (i) => setAvailabilitySchedule((p) => p.filter((_, idx) => idx !== i));
 
   const addBlock = () => {
-    if (!newBlock.start || !newBlock.end) { setError("Block must have start and end."); return; }
-    if (new Date(newBlock.start) >= new Date(newBlock.end)) { setError("Block end must be after start."); return; }
+    if (!newBlock.start || !newBlock.end) { setError("Please select a valid date range."); return; }
+    if (new Date(newBlock.start) >= new Date(newBlock.end)) { setError("Block end date must be after start."); return; }
     setBlockedDates((p) => [...p, { ...newBlock }]);
-    setNewBlock({ start: "", end: "", reason: "Unavailable" });
+    setNewBlock({ start: "", end: "", reason: "Maintenance" });
     setError("");
   };
   const removeBlock = (i) => setBlockedDates((p) => p.filter((_, idx) => idx !== i));
@@ -95,11 +115,7 @@ const EditEquipment = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.description.trim()) {
-      setError("Name and description are required.");
-      return;
-    }
-    if (!form.isFree && (!form.rentalPricePerDay || Number(form.rentalPricePerDay) < 1 || Number(form.rentalPricePerDay) > 5)) {
-      setError("Please enter a rental price between 1 and 5 tk.");
+      setError("Equipment name and primary description are required.");
       return;
     }
     setSubmitting(true);
@@ -115,204 +131,243 @@ const EditEquipment = () => {
       };
       await axios.put(`${API}/api/equipment/${id}`, payload, { headers: authHeaders });
       setSuccess(true);
-      setTimeout(() => navigate(`/equipment/manage`), 1500); // Navigate to manage page
+      setTimeout(() => navigate(`/equipment/manage`), 1500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update equipment.");
+      setError(err.response?.data?.message || "Modification update failed.");
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f8fbff]">
       <Navbar />
-      <div className="flex items-center justify-center py-32"><div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" /></div>
-    </div>
-  );
-
-  if (!form) return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <AlertTriangle size={40} className="mx-auto mb-3 text-red-400" />
-        <p className="text-slate-600">{error || "Equipment not found."}</p>
-        <button onClick={() => navigate("/equipment/manage")} className="mt-4 text-blue-600 hover:underline">← Back</button>
-      </div>
+      <div className="flex items-center justify-center py-48"><RefreshCw size={48} className="animate-spin text-blue-600 opacity-20" /></div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/20">
-      <Navbar />
-      <div className="border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-3xl px-4 py-6 pt-24">
-          <button onClick={() => navigate(`/equipment/manage`)} className="mb-3 flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-blue-600 transition">
-            <ArrowLeft size={15} /> Back to Management
-          </button>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Cpu size={22} className="text-blue-600" /> Edit Equipment</h1>
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-x-hidden bg-[#f8fbff] text-slate-900">
+      <div className="absolute inset-0 z-[1]"><SplashCursor /></div>
+      <div className="absolute inset-0 z-[2] bg-white/35 backdrop-blur-[0.5px]" />
 
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        {success ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-10 text-center shadow-sm">
-            <CheckCircle size={48} className="mx-auto mb-4 text-emerald-500" />
-            <h3 className="text-xl font-bold text-emerald-800">Equipment Updated!</h3>
-            <p className="text-emerald-600 mt-2">Redirecting to management dashboard...</p>
+      <div className="relative z-10">
+        <Navbar />
+
+        {/* Hero Section */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-slate-950 via-slate-900 to-blue-900 pt-32 pb-20 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+          <div className="mx-auto max-w-4xl px-4 relative z-10">
+            <button onClick={() => navigate("/equipment/manage")} className="mb-8 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-400 hover:text-blue-300 transition">
+              <ArrowLeft size={16} /> Exit Editor
+            </button>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="font-serif text-4xl font-semibold leading-tight sm:text-5xl">Modify <span className="text-blue-400">Asset Data</span></h1>
+              <p className="mt-4 text-blue-100/70 font-serif text-lg truncate max-w-2xl">Editing: {form?.name || "Equipment Resource"}</p>
+            </motion.div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-              <h2 className="text-base font-bold text-slate-700 border-b border-slate-100 pb-3">Basic Information</h2>
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Name <span className="text-red-500">*</span></label>
-                <input type="text" name="name" value={form.name} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" required />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Description <span className="text-red-500">*</span></label>
-                <textarea name="description" value={form.description} onChange={handleChange} rows={3} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" required />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Category</label>
-                  <select name="category" value={form.category} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Location</label>
-                  <input type="text" name="location" value={form.location} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Specifications</label>
-                <textarea name="specifications" value={form.specifications} onChange={handleChange} rows={2} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Usage Instructions</label>
-                <textarea name="usageInstructions" value={form.usageInstructions} onChange={handleChange} rows={2} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Tags</label>
-                <input type="text" name="tags" value={form.tags} onChange={handleChange} placeholder="Comma-separated" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" />
-              </div>
-            </div>
+        </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-              <h2 className="text-base font-bold text-slate-700 border-b border-slate-100 pb-3">Rental & Status</h2>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="isFree" name="isFree" checked={form.isFree} onChange={handleChange} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400" />
-                <label htmlFor="isFree" className="text-sm font-semibold text-slate-700">Free to borrow</label>
+        <div className="mx-auto max-w-4xl px-4 -mt-10 pb-32">
+          {success ? (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-[40px] border border-white/70 bg-white/90 p-20 text-center shadow-2xl backdrop-blur-2xl">
+              <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[32px] bg-emerald-50 text-emerald-500">
+                <CheckCircle size={56} />
               </div>
-              {!form.isFree && (
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Price Per Day (tk)</label>
-                  <input type="number" name="rentalPricePerDay" value={form.rentalPricePerDay} onChange={handleChange} min="1" max="5" step="0.01" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" />
+              <h2 className="text-3xl font-serif font-bold text-slate-800 mb-2">Registry Updated!</h2>
+              <p className="text-slate-500 font-medium">Modifications have been synchronized with the research network.</p>
+              <div className="mt-12 flex justify-center"><RefreshCw size={32} className="animate-spin text-blue-600 opacity-20" /></div>
+            </motion.div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Basic Section */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-[32px] border border-white/70 bg-white/85 p-8 shadow-xl backdrop-blur-xl space-y-8">
+                <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-inner">
+                    <Cpu size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-serif font-bold text-slate-800">Resource Identity</h2>
+                    <p className="text-xs font-bold text-slate-300 uppercase tracking-widest mt-0.5">Edit Basic Identifiers</p>
+                  </div>
                 </div>
-              )}
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
-                    <option value="available">Available</option>
-                    <option value="unavailable">Unavailable</option>
-                    <option value="maintenance">Maintenance</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Condition</label>
-                  <select name="condition" value={form.condition} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
-                    <option value="excellent">Excellent</option>
-                    <option value="good">Good</option>
-                    <option value="fair">Fair</option>
-                    <option value="poor">Poor</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">Max Days</label>
-                  <input type="number" name="maxBookingDays" value={form.maxBookingDays} onChange={handleChange} min="1" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-slate-700 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 transition" />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="requiresTraining" name="requiresTraining" checked={form.requiresTraining} onChange={handleChange} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400" />
-                <label htmlFor="requiresTraining" className="text-sm font-semibold text-slate-700">Requires training</label>
-              </div>
-            </div>
 
-            {/* Availability Schedule */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">Weekly Availability</h2>
-              {availabilitySchedule.length > 0 && (
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {availabilitySchedule.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-1.5">
-                      <span className="text-xs font-semibold text-blue-700">{DAY_NAMES[s.dayOfWeek]} {s.startTime}–{s.endTime}</span>
-                      <button type="button" onClick={() => removeSlot(i)} className="text-blue-400 hover:text-red-500 transition"><X size={13} /></button>
+                <div className="grid gap-8">
+                  <Field label="Asset Title" required>
+                    <input
+                      type="text" name="name" value={form.name} onChange={handleChange}
+                      className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-medium text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all"
+                      required
+                    />
+                  </Field>
+
+                  <Field label="Resource Description" required>
+                    <textarea
+                      name="description" value={form.description} onChange={handleChange} rows={4}
+                      className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-medium text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all"
+                      required
+                    />
+                  </Field>
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <Field label="Category" required>
+                      <div className="relative">
+                        <select
+                          name="category" value={form.category} onChange={handleChange}
+                          className="w-full appearance-none rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all"
+                        >
+                          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" size={18} />
+                      </div>
+                    </Field>
+
+                    <Field label="Lab Location">
+                      <div className="relative">
+                        <input
+                          type="text" name="location" value={form.location} onChange={handleChange}
+                          className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 pl-14 pr-6 py-4 font-medium text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all"
+                        />
+                        <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-blue-500" size={20} />
+                      </div>
+                    </Field>
+                  </div>
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <Field label="Technical Specs">
+                      <textarea name="specifications" value={form.specifications} onChange={handleChange} rows={2} className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-medium text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all" />
+                    </Field>
+                    <Field label="Usage SOP">
+                      <textarea name="usageInstructions" value={form.usageInstructions} onChange={handleChange} rows={2} className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-medium text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all" />
+                    </Field>
+                  </div>
+
+                  <Field label="Metadata Tags" hint="Comma-separated identifiers">
+                    <div className="relative">
+                      <input
+                        type="text" name="tags" value={form.tags} onChange={handleChange}
+                        className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 pl-14 pr-6 py-4 font-medium text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all"
+                      />
+                      <Tag className="absolute left-6 top-1/2 -translate-y-1/2 text-indigo-500" size={20} />
                     </div>
-                  ))}
+                  </Field>
                 </div>
-              )}
-              <div className="flex flex-wrap gap-3 items-end">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-500">Day</label>
-                  <select value={newSlot.dayOfWeek} onChange={(e) => setNewSlot((p) => ({ ...p, dayOfWeek: e.target.value }))} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none">
-                    {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-500">From</label>
-                  <input type="time" value={newSlot.startTime} onChange={(e) => setNewSlot((p) => ({ ...p, startTime: e.target.value }))} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-500">To</label>
-                  <input type="time" value={newSlot.endTime} onChange={(e) => setNewSlot((p) => ({ ...p, endTime: e.target.value }))} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none" />
-                </div>
-                <button type="button" onClick={addSlot} className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 transition"><Plus size={13} /> Add</button>
-              </div>
-            </div>
+              </motion.div>
 
-            {/* Blocked dates */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5">Blocked Dates</h2>
-              {blockedDates.length > 0 && (
-                <div className="mb-4 space-y-2">
-                  {blockedDates.map((b, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
-                      <span className="text-xs font-semibold text-amber-700">{b.start} → {b.end}: {b.reason}</span>
-                      <button type="button" onClick={() => removeBlock(i)} className="text-amber-400 hover:text-red-500 transition"><X size={13} /></button>
+              {/* Status & Terms */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-[32px] border border-white/70 bg-white/85 p-8 shadow-xl backdrop-blur-xl space-y-8">
+                <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 shadow-inner">
+                    <Gift size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-serif font-bold text-slate-800">Terms & Availability</h2>
+                    <p className="text-xs font-bold text-slate-300 uppercase tracking-widest mt-0.5">Configure Pricing & Status</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-8">
+                  <div className="flex items-center gap-4 rounded-[24px] bg-slate-50/50 p-6 border border-slate-100">
+                    <input type="checkbox" id="isFree" name="isFree" checked={form.isFree} onChange={handleChange} className="h-6 w-6 rounded-lg text-blue-600 cursor-pointer" />
+                    <label htmlFor="isFree" className="text-sm font-bold text-slate-800 cursor-pointer">Open Research Access (Free)</label>
+                  </div>
+
+                  {!form.isFree && (
+                    <Field label="Daily Rate (TK)" required>
+                      <input type="number" name="rentalPricePerDay" value={form.rentalPricePerDay} onChange={handleChange} className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-black text-slate-800 focus:bg-white focus:outline-none transition-all" />
+                    </Field>
+                  )}
+
+                  <div className="grid gap-6 md:grid-cols-3">
+                    <Field label="State">
+                      <select name="status" value={form.status} onChange={handleChange} className="w-full appearance-none rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-bold text-slate-700">
+                        <option value="available">Available</option>
+                        <option value="unavailable">Unavailable</option>
+                        <option value="maintenance">Maintenance</option>
+                      </select>
+                    </Field>
+                    <Field label="Condition">
+                      <select name="condition" value={form.condition} onChange={handleChange} className="w-full appearance-none rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-bold text-slate-700">
+                        <option value="excellent">Excellent</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="poor">Poor</option>
+                      </select>
+                    </Field>
+                    <Field label="Max Term">
+                      <input type="number" name="maxBookingDays" value={form.maxBookingDays} onChange={handleChange} className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 font-bold text-slate-700" />
+                    </Field>
+                  </div>
+
+                  <div className="flex items-center gap-4 rounded-[24px] bg-slate-50/50 p-6 border border-slate-100">
+                    <input type="checkbox" id="requiresTraining" name="requiresTraining" checked={form.requiresTraining} onChange={handleChange} className="h-6 w-6 rounded-lg text-indigo-600 cursor-pointer" />
+                    <div className="flex items-center gap-2">
+                      <Zap size={18} className="text-indigo-500" />
+                      <label htmlFor="requiresTraining" className="text-sm font-bold text-slate-800 cursor-pointer">Training/Supervision Required</label>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              )}
-              <div className="flex flex-wrap gap-3 items-end">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-500">Start</label>
-                  <input type="date" value={newBlock.start} onChange={(e) => setNewBlock((p) => ({ ...p, start: e.target.value }))} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none" />
+              </motion.div>
+
+              {/* Operational Sections */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-[32px] border border-white/70 bg-white/85 p-8 shadow-xl backdrop-blur-xl space-y-8">
+                <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-inner">
+                    <Clock size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-serif font-bold text-slate-800">Operational Log</h2>
+                    <p className="text-xs font-bold text-slate-300 uppercase tracking-widest mt-0.5">Schedules & Blackouts</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-500">End</label>
-                  <input type="date" value={newBlock.end} onChange={(e) => setNewBlock((p) => ({ ...p, end: e.target.value }))} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none" />
+
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Weekly Hours</h3>
+                    {availabilitySchedule.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-2xl bg-blue-50 border border-blue-100 p-4">
+                        <span className="text-sm font-bold text-blue-700">{DAY_NAMES[s.dayOfWeek]} {s.startTime} — {s.endTime}</span>
+                        <button type="button" onClick={() => removeSlot(i)} className="p-2 text-blue-400 hover:text-rose-500 transition"><X size={18} /></button>
+                      </div>
+                    ))}
+                    <div className="grid gap-4 md:grid-cols-4 items-end bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                      <select value={newSlot.dayOfWeek} onChange={(e) => setNewSlot((p) => ({ ...p, dayOfWeek: e.target.value }))} className="rounded-xl border-none bg-white px-4 py-2 text-xs font-bold">
+                        {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                      </select>
+                      <input type="time" value={newSlot.startTime} onChange={(e) => setNewSlot((p) => ({ ...p, startTime: e.target.value }))} className="rounded-xl border-none bg-white px-4 py-2 text-xs font-bold" />
+                      <input type="time" value={newSlot.endTime} onChange={(e) => setNewSlot((p) => ({ ...p, endTime: e.target.value }))} className="rounded-xl border-none bg-white px-4 py-2 text-xs font-bold" />
+                      <button type="button" onClick={addSlot} className="bg-white text-blue-600 border border-blue-100 font-bold py-2 rounded-xl text-xs hover:bg-blue-600 hover:text-white transition-all">Add</button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-6 border-t border-slate-100">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Blackout Periods</h3>
+                    {blockedDates.map((b, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-2xl bg-amber-50 border border-amber-100 p-4">
+                        <span className="text-sm font-bold text-amber-700">{b.start} → {b.end} ({b.reason})</span>
+                        <button type="button" onClick={() => removeBlock(i)} className="p-2 text-amber-400 hover:text-rose-500 transition"><X size={18} /></button>
+                      </div>
+                    ))}
+                    <div className="grid gap-4 md:grid-cols-4 items-end bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                      <input type="date" value={newBlock.start} onChange={(e) => setNewBlock((p) => ({ ...p, start: e.target.value }))} className="rounded-xl border-none bg-white px-4 py-2 text-[10px] font-bold" />
+                      <input type="date" value={newBlock.end} onChange={(e) => setNewBlock((p) => ({ ...p, end: e.target.value }))} className="rounded-xl border-none bg-white px-4 py-2 text-[10px] font-bold" />
+                      <input type="text" value={newBlock.reason} onChange={(e) => setNewBlock((p) => ({ ...p, reason: e.target.value }))} className="rounded-xl border-none bg-white px-4 py-2 text-[10px] font-bold" />
+                      <button type="button" onClick={addBlock} className="bg-white text-amber-600 border border-amber-100 font-bold py-2 rounded-xl text-xs hover:bg-amber-600 hover:text-white transition-all">Block</button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-slate-500">Reason</label>
-                  <input type="text" value={newBlock.reason} onChange={(e) => setNewBlock((p) => ({ ...p, reason: e.target.value }))} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none" />
-                </div>
-                <button type="button" onClick={addBlock} className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 transition"><Plus size={13} /> Add</button>
+              </motion.div>
+
+              {/* Submit Area */}
+              <div className="flex gap-4">
+                <button type="button" onClick={() => navigate(`/equipment/manage`)} className="flex-1 rounded-2xl border border-slate-200 py-5 text-sm font-bold text-slate-400 hover:bg-white transition-all">Cancel Edits</button>
+                <button type="submit" disabled={submitting} className="flex-[2] flex items-center justify-center gap-3 rounded-2xl bg-blue-600 py-5 text-sm font-bold text-white shadow-xl hover:bg-blue-500 transition-all">
+                  {submitting ? <RefreshCw size={20} className="animate-spin" /> : <><Save size={20} /> Update Registry</>}
+                </button>
               </div>
-            </div>
-
-            {error && (
-              <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600 flex items-center gap-2"><AlertTriangle size={16} /> {error}</div>
-            )}
-
-            <div className="flex gap-3 pb-8">
-              <button type="button" onClick={() => navigate(`/equipment/manage`)} className="flex-1 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
-              <button type="submit" disabled={submitting} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-60 transition">
-                {submitting ? <><div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</> : <><Save size={15} /> Save Changes</>}
-              </button>
-            </div>
-          </form>
-        )}
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

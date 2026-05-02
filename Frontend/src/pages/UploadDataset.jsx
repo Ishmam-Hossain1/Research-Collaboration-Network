@@ -1,10 +1,34 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import { Upload, Tag, Lock, FileText, ArrowLeft, X, Mail } from "lucide-react";
+import { 
+    Upload, 
+    Tag, 
+    Lock, 
+    FileText, 
+    ArrowLeft, 
+    X, 
+    Mail, 
+    Sparkles, 
+    FileUp,
+    ChevronLeft,
+    CheckCircle2,
+    Loader2
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
+import SplashCursor from "../components/SplashCursor";
 
 const API = "http://localhost:5000";
+
+const fadeUpVariant = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+        opacity: 1, 
+        y: 0, 
+        transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } 
+    }
+};
 
 const UploadDataset = () => {
     const navigate = useNavigate();
@@ -20,27 +44,22 @@ const UploadDataset = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    // Restricted emails state
     const [allowedEmails, setAllowedEmails] = useState([]);
     const [emailInput, setEmailInput] = useState("");
+
+    const currentUser = useMemo(() => {
+        try {
+            return JSON.parse(localStorage.getItem("researchConnectUser") || "null");
+        } catch {
+            return null;
+        }
+    }, []);
 
     const handleAddEmail = (e) => {
         e.preventDefault();
         const trimmed = emailInput.trim().toLowerCase();
-        if (!trimmed) return;
-
-        // Basic email regex map validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(trimmed)) {
-            setError("Please enter a valid email address.");
-            return;
-        }
-
-        if (allowedEmails.includes(trimmed)) {
-            setError("Email is already in the list.");
-            return;
-        }
-
+        if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return;
+        if (allowedEmails.includes(trimmed)) return;
         setAllowedEmails([...allowedEmails, trimmed]);
         setEmailInput("");
         setError("");
@@ -67,14 +86,10 @@ const UploadDataset = () => {
             setError("Please select a file to upload.");
             return;
         }
-        if (!formData.title.trim()) {
-            setError("Title is required.");
-            return;
-        }
 
         const token = localStorage.getItem("researchConnectToken");
         if (!token) {
-            setError("You must be logged in to upload a dataset.");
+            setError("Session expired. Please login again.");
             return;
         }
 
@@ -102,248 +117,245 @@ const UploadDataset = () => {
                 },
             });
 
-            setSuccess("Dataset uploaded successfully!");
-            setFormData({ title: "", description: "", tags: "", accessControl: "public" });
-            setAllowedEmails([]);
-            setEmailInput("");
-            setFile(null);
-            document.getElementById("file-input").value = "";
-
-            // Redirect back to datasets after success
-            setTimeout(() => {
-                navigate("/datasets");
-            }, 1500);
+            setSuccess("Dataset published successfully!");
+            setTimeout(() => navigate("/datasets"), 1500);
         } catch (err) {
-            setError(err.response?.data?.message || "Upload failed. Please try again.");
+            setError(err.response?.data?.message || "Internal server error.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-            <Navbar />
+        <div className="relative min-h-screen overflow-x-hidden bg-[#f8fbff] text-slate-900">
+            {/* Background Effects */}
+            <div className="absolute inset-0 z-[1]">
+                <SplashCursor />
+            </div>
+            <div className="absolute inset-0 z-[2] bg-white/35 backdrop-blur-[0.5px]" />
 
-            <div className="px-4 py-10">
-                <div className="mx-auto max-w-2xl">
-                    {/* Header */}
-                    <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold text-slate-800">Upload Dataset</h1>
-                            <p className="mt-1 text-slate-500">
-                                Share your research data with the community
-                            </p>
-                        </div>
-                        <Link
-                            to="/datasets"
-                            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
+            <div className="relative z-10">
+                <Navbar />
+
+                <main className="mx-auto max-w-4xl px-4 pt-32 pb-24">
+                    {/* Breadcrumbs */}
+                    <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="mb-8"
+                    >
+                        <Link 
+                            to="/datasets" 
+                            className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 transition hover:text-blue-600"
                         >
-                            <ArrowLeft size={16} />
-                            Browse Datasets
+                            <ChevronLeft size={16} />
+                            Back to Library
                         </Link>
-                    </div>
+                    </motion.div>
 
-                    {/* Form Card */}
-                    <div className="rounded-2xl bg-white p-8 shadow-lg ring-1 ring-slate-100">
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Title */}
-                            <div>
-                                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                    <FileText size={15} />
-                                    Title <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    id="dataset-title"
-                                    name="title"
-                                    value={formData.title}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Climate Change Gene Expression Dataset"
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-3 focus:ring-blue-100 transition"
-                                    required
-                                />
+                    <div className="grid gap-12 lg:grid-cols-[1fr_400px]">
+                        {/* Header Section */}
+                        <motion.div 
+                            variants={fadeUpVariant}
+                            initial="hidden"
+                            animate="visible"
+                        >
+                            <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-600 text-white shadow-xl shadow-blue-600/20">
+                                <FileUp size={32} />
                             </div>
+                            <h1 className="font-serif text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+                                Share your <span className="text-blue-600">Research.</span>
+                            </h1>
+                            <p className="mt-6 text-lg leading-relaxed text-slate-500 font-serif">
+                                Upload your datasets to the global Research Connect network. 
+                                Control access, track usage, and contribute to the community's 
+                                shared knowledge base.
+                            </p>
 
-                            {/* Description */}
-                            <div>
-                                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                                    Description
-                                </label>
-                                <textarea
-                                    id="dataset-description"
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={handleChange}
-                                    placeholder="Describe your dataset — methodology, source, time period, etc."
-                                    rows={4}
-                                    className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-3 focus:ring-blue-100 transition"
-                                />
-                            </div>
-
-                            {/* Tags */}
-                            <div>
-                                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                    <Tag size={15} />
-                                    Category Tags
-                                </label>
-                                <input
-                                    type="text"
-                                    id="dataset-tags"
-                                    name="tags"
-                                    value={formData.tags}
-                                    onChange={handleChange}
-                                    placeholder="biology, machine-learning, climate (comma-separated)"
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-3 focus:ring-blue-100 transition"
-                                />
-                                <p className="mt-1 text-xs text-slate-400">Separate tags with commas</p>
-                            </div>
-
-                            {/* Access Control */}
-                            <div>
-                                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                    <Lock size={15} />
-                                    Download Access
-                                </label>
-                                <select
-                                    id="dataset-access"
-                                    name="accessControl"
-                                    value={formData.accessControl}
-                                    onChange={handleChange}
-                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-3 focus:ring-blue-100 transition"
-                                >
-                                    <option value="public">🌍 Public — Anyone can download</option>
-                                    <option value="private">🔒 Private — Only you can download</option>
-                                    <option value="restricted">👥 Restricted — Specific users only</option>
-                                </select>
-                            </div>
-
-                            {/* Conditional Restricted Emails Input */}
-                            {formData.accessControl === "restricted" && (
-                                <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-5">
-                                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-900">
-                                        <Mail size={15} />
-                                        Allowed Users
-                                    </label>
-                                    <p className="mb-3 text-xs text-blue-700">
-                                        Enter the email addresses of registered users who can download this dataset.
-                                    </p>
-
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="email"
-                                            value={emailInput}
-                                            onChange={(e) => setEmailInput(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter") {
-                                                    e.preventDefault();
-                                                    handleAddEmail(e);
-                                                }
-                                            }}
-                                            placeholder="colleague@university.edu"
-                                            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={handleAddEmail}
-                                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                        >
-                                            Add
-                                        </button>
+                            <div className="mt-12 space-y-8">
+                                <div className="flex gap-4">
+                                    <div className="mt-1 h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                                    <div>
+                                        <h4 className="font-bold text-slate-800">Secure Storage</h4>
+                                        <p className="text-sm text-slate-500">Your data is encrypted and stored with redundancy.</p>
                                     </div>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="mt-1 h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                                    <div>
+                                        <h4 className="font-bold text-slate-800">Granular Access</h4>
+                                        <p className="text-sm text-slate-500">Choose between Public, Private, or Whitelisted access.</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="mt-1 h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+                                    <div>
+                                        <h4 className="font-bold text-slate-800">Automatic Tagging</h4>
+                                        <p className="text-sm text-slate-500">Our system helps categorize your data for better discoverability.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
 
-                                    {allowedEmails.length > 0 && (
-                                        <div className="mt-4 flex flex-wrap gap-2">
-                                            {allowedEmails.map((email) => (
-                                                <span
-                                                    key={email}
-                                                    className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200"
-                                                >
-                                                    {email}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveEmail(email)}
-                                                        className="ml-1 rounded-full p-0.5 text-slate-400 hover:bg-slate-100 hover:text-red-500"
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
+                        {/* Form Card */}
+                        <motion.div 
+                            variants={fadeUpVariant}
+                            initial="hidden"
+                            animate="visible"
+                            transition={{ delay: 0.1 }}
+                            className="rounded-[32px] border border-white/70 bg-white/80 p-8 shadow-2xl shadow-slate-200/50 backdrop-blur-2xl"
+                        >
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div>
+                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Dataset Title</label>
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        value={formData.title}
+                                        onChange={handleChange}
+                                        placeholder="Enter a descriptive title"
+                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Description</label>
+                                    <textarea
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                        rows={3}
+                                        placeholder="What does this dataset contain?"
+                                        className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                    />
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Visibility</label>
+                                        <select
+                                            name="accessControl"
+                                            value={formData.accessControl}
+                                            onChange={handleChange}
+                                            className="w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-sm font-bold text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                        >
+                                            <option value="public">🌍 Public</option>
+                                            <option value="private">🔒 Private</option>
+                                            <option value="restricted">👥 Restricted</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Tags</label>
+                                        <input
+                                            type="text"
+                                            name="tags"
+                                            value={formData.tags}
+                                            onChange={handleChange}
+                                            placeholder="biology, ai..."
+                                            className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-5 py-3.5 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {formData.accessControl === "restricted" && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, height: 0 }} 
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        className="rounded-2xl border border-blue-100 bg-blue-50/30 p-5"
+                                    >
+                                        <label className="mb-3 block text-xs font-bold uppercase tracking-wider text-blue-900">Whitelist Emails</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="email"
+                                                value={emailInput}
+                                                onChange={(e) => setEmailInput(e.target.value)}
+                                                placeholder="Enter email..."
+                                                className="flex-1 rounded-xl border border-blue-200 px-3 py-2 text-xs focus:outline-none"
+                                            />
+                                            <button type="button" onClick={handleAddEmail} className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white">Add</button>
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {allowedEmails.map(e => (
+                                                <span key={e} className="rounded-full bg-white px-2 py-1 text-[10px] font-bold border border-slate-200 flex items-center gap-1">
+                                                    {e} <button type="button" onClick={() => handleRemoveEmail(e)}><X size={10}/></button>
                                                 </span>
                                             ))}
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    </motion.div>
+                                )}
 
-                            {/* File Upload */}
-                            <div>
-                                <label className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                    <Upload size={15} />
-                                    Dataset File <span className="text-red-500">*</span>
-                                </label>
-                                <div className="relative flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-8 transition hover:border-blue-400 hover:bg-blue-50">
-                                    <input
-                                        type="file"
-                                        id="file-input"
-                                        onChange={handleFileChange}
-                                        className="absolute inset-0 cursor-pointer opacity-0"
-                                    />
-                                    <div className="text-center">
-                                        <Upload size={32} className="mx-auto mb-2 text-slate-400" />
-                                        {file ? (
-                                            <div>
-                                                <p className="font-medium text-blue-700">{file.name}</p>
-                                                <p className="text-xs text-slate-500">
-                                                    {(file.size / 1024).toFixed(1)} KB
-                                                </p>
+                                <div>
+                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Upload File</label>
+                                    <div className="relative group overflow-hidden rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 transition-all hover:border-blue-400 hover:bg-blue-50/30">
+                                        <input
+                                            type="file"
+                                            id="file-input"
+                                            onChange={handleFileChange}
+                                            className="absolute inset-0 cursor-pointer opacity-0 z-10"
+                                        />
+                                        <div className="py-8 px-4 text-center">
+                                            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm transition-transform group-hover:scale-110">
+                                                <Upload size={24} className="text-blue-500" />
                                             </div>
-                                        ) : (
-                                            <div>
-                                                <p className="font-medium text-slate-600">
-                                                    Click to select or drag &amp; drop
-                                                </p>
-                                                <p className="text-xs text-slate-400">Any file format accepted</p>
-                                            </div>
-                                        )}
+                                            {file ? (
+                                                <div>
+                                                    <p className="text-sm font-bold text-slate-800 truncate px-4">{file.name}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">{(file.size / 1024).toFixed(1)} KB</p>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Drop or Select File</p>
+                                                    <p className="mt-1 text-[10px] text-slate-400 font-medium">All research formats supported</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Status messages */}
-                            {error && (
-                                <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600 ring-1 ring-red-200">
-                                    {error}
-                                </div>
-                            )}
-                            {success && (
-                                <div className="rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700 ring-1 ring-green-200">
-                                    {success}
-                                </div>
-                            )}
+                                <AnimatePresence>
+                                    {error && (
+                                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-rose-50 p-4 text-xs font-bold text-rose-600 border border-rose-100">
+                                            {error}
+                                        </motion.div>
+                                    )}
+                                    {success && (
+                                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-emerald-50 p-4 text-xs font-bold text-emerald-600 border border-emerald-100 flex items-center gap-2">
+                                            <CheckCircle2 size={14}/> {success}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
-                            {/* Submit */}
-                            <button
-                                type="submit"
-                                id="upload-submit"
-                                disabled={loading}
-                                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-3.5 font-semibold text-white shadow-md transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {loading ? (
-                                    <>
-                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                        Uploading…
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload size={18} />
-                                        Upload Dataset
-                                    </>
-                                )}
-                            </button>
-                        </form>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 py-4 text-sm font-bold text-white shadow-xl shadow-blue-500/30 transition hover:from-blue-500 hover:to-indigo-600 disabled:opacity-50"
+                                >
+                                    <div className="relative z-10 flex items-center justify-center gap-2">
+                                        {loading ? (
+                                            <Loader2 size={18} className="animate-spin" />
+                                        ) : (
+                                            <Sparkles size={18} />
+                                        )}
+                                        {loading ? "Publishing Data..." : "Publish Dataset"}
+                                    </div>
+                                    {loading && (
+                                        <motion.div 
+                                            initial={{ x: "-100%" }}
+                                            animate={{ x: "0%" }}
+                                            transition={{ duration: 1.5, repeat: Infinity }}
+                                            className="absolute inset-0 bg-white/20"
+                                        />
+                                    )}
+                                </button>
+                            </form>
+                        </motion.div>
                     </div>
-                </div>
+                </main>
             </div>
         </div>
     );
 };
 
 export default UploadDataset;
+

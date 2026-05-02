@@ -6,16 +6,24 @@ import { getDatasetsBucket } from "../config/gridfs.js";
 
 // Helper: check if a user has access to a dataset
 const hasAccess = (dataset, user) => {
+    // If it's public, everyone can see it
     if (dataset.accessControl === "public") return true;
+    
+    // Safety check for uploader
+    if (!dataset.uploadedBy) return false;
+
     if (!user) return false;
-    const ownerId = dataset.uploadedBy._id?.toString() || dataset.uploadedBy.toString();
-    if (ownerId === user._id.toString()) return true;
+
+    const ownerId = dataset.uploadedBy._id ? dataset.uploadedBy._id.toString() : dataset.uploadedBy.toString();
+    const userId = user._id ? user._id.toString() : user.toString();
+
+    if (ownerId === userId) return true;
+
     if (dataset.accessControl === "restricted") {
-        return dataset.allowedUsers.some(
-            (uid) => uid.toString() === user._id.toString()
+        return (dataset.allowedUsers || []).some(
+            (uid) => uid && uid.toString() === userId
         );
     }
-    // private — only owner
     return false;
 };
 

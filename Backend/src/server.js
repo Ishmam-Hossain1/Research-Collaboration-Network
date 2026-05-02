@@ -23,6 +23,7 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js"; // ✅ NEW
 import grantApplicationRoutes from "./routes/grantApplicationRoutes.js";
 import equipmentRoutes from "./routes/equipmentRoutes.js";
+
 import { startReminderJob } from "./jobs/reminderJob.js";
 
 dotenv.config();
@@ -104,6 +105,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/ai", aiRoutes); // ✅ NEW
 app.use("/api/grant-applications", grantApplicationRoutes);
 app.use("/api/equipment", equipmentRoutes);
+
 
 
 // Default route
