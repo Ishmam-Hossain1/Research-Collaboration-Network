@@ -33,12 +33,7 @@ import {
   Bot,
 } from "lucide-react";
 
-/** Hero background slideshow — cycles through project assets */
-const heroSlideshowImages = [
-  resourcesImage,
-  bgImageTwo,
-  bgImageThree,
-];
+const heroSlideshowImages = [resourcesImage, bgImageTwo, bgImageThree];
 
 const features = [
   {
@@ -63,14 +58,7 @@ const features = [
 
 const heroStats = [
   { label: "Research tools", value: 1971 },
-  { label: "Platform features", value: 5656 },
-];
-
-const dashboardStats = [
-  { label: "Projects", value: 850 },
-  { label: "Researchers", value: 2400 },
-  { label: "Datasets", value: 310 },
-  { label: "Resources", value: 120 },
+  { label: "Platform features", value: 16 },
 ];
 
 const visualShowcase = [
@@ -124,6 +112,17 @@ function formatCompactPlus(value) {
   return `${value}+`;
 }
 
+function getArrayFromResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.projects)) return data.projects;
+  if (Array.isArray(data?.users)) return data.users;
+  if (Array.isArray(data?.researchers)) return data.researchers;
+  if (Array.isArray(data?.datasets)) return data.datasets;
+  if (Array.isArray(data?.resources)) return data.resources;
+  return [];
+}
+
 function CountUp({ end, duration = 1800, formatter, className = "" }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.4 });
@@ -172,37 +171,105 @@ function CountUp({ end, duration = 1800, formatter, className = "" }) {
 export default function Homepage() {
   const navigate = useNavigate();
   const featuresRef = useRef(null);
+  const footerRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
 
   const { scrollY } = useScroll();
   const [showNavbar, setShowNavbar] = useState(true);
   const showNavbarRef = useRef(true);
   const [isLowPowerDevice, setIsLowPowerDevice] = useState(false);
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+
+  const [counts, setCounts] = useState({
+    projects: 0,
+    researchers: 0,
+    datasets: 0,
+    resources: 0,
+  });
+
+  const dashboardStats = [
+    { label: "Projects", value: counts.projects },
+    { label: "Researchers", value: counts.researchers },
+    { label: "Datasets", value: counts.datasets },
+    { label: "Resources", value: counts.resources },
+  ];
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
+
     const updateDeviceMode = () => {
       setIsLowPowerDevice(mediaQuery.matches);
     };
 
     updateDeviceMode();
     mediaQuery.addEventListener("change", updateDeviceMode);
+
     return () => mediaQuery.removeEventListener("change", updateDeviceMode);
   }, []);
 
   const smoothMode = prefersReducedMotion || isLowPowerDevice;
 
-  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
-
   useEffect(() => {
     if (prefersReducedMotion || heroSlideshowImages.length <= 1) return;
 
     const intervalMs = smoothMode ? 9000 : 6500;
+
     const id = window.setInterval(() => {
       setHeroSlideIndex((i) => (i + 1) % heroSlideshowImages.length);
     }, intervalMs);
+
     return () => window.clearInterval(id);
   }, [prefersReducedMotion, smoothMode]);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [projectsRes, usersRes, datasetsRes, resourcesRes] =
+          await Promise.allSettled([
+            fetch("http://localhost:5000/api/projects"),
+            fetch("http://localhost:5000/api/users"),
+            fetch("http://localhost:5000/api/datasets"),
+            fetch("http://localhost:5000/api/resources"),
+          ]);
+
+        let projectsCount = 0;
+        let researchersCount = 0;
+        let datasetsCount = 0;
+        let resourcesCount = 0;
+
+        if (projectsRes.status === "fulfilled" && projectsRes.value.ok) {
+          const projectsData = await projectsRes.value.json();
+          projectsCount = getArrayFromResponse(projectsData).length;
+        }
+
+        if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+          const usersData = await usersRes.value.json();
+          researchersCount = getArrayFromResponse(usersData).length;
+        }
+
+        if (datasetsRes.status === "fulfilled" && datasetsRes.value.ok) {
+          const datasetsData = await datasetsRes.value.json();
+          datasetsCount = getArrayFromResponse(datasetsData).length;
+        }
+
+        if (resourcesRes.status === "fulfilled" && resourcesRes.value.ok) {
+          const resourcesData = await resourcesRes.value.json();
+          resourcesCount = getArrayFromResponse(resourcesData).length;
+        }
+
+        setCounts({
+          projects: projectsCount,
+          researchers: researchersCount,
+          datasets: datasetsCount,
+          resources: resourcesCount,
+        });
+      } catch (err) {
+        console.error("Error fetching homepage counts:", err);
+      }
+    };
+
+    fetchCounts();
+  }, []);
 
   const heroScale = useTransform(scrollY, [0, 280], [1, smoothMode ? 0.99 : 0.96]);
   const heroY = useTransform(scrollY, [0, 280], [0, smoothMode ? -10 : -28]);
@@ -224,6 +291,7 @@ export default function Homepage() {
     if (Math.abs(diff) < 10) return;
 
     const nextNavbarState = diff <= 0;
+
     if (nextNavbarState !== showNavbarRef.current) {
       showNavbarRef.current = nextNavbarState;
       setShowNavbar(nextNavbarState);
@@ -234,9 +302,12 @@ export default function Homepage() {
     featuresRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const scrollToFooter = () => {
+    footerRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#f8fbff] text-slate-900">
-      {/* Splash cursor background */}
       <div className="absolute inset-0 z-[1]">
         <SplashCursor
           SIM_RESOLUTION={smoothMode ? 64 : 128}
@@ -251,10 +322,8 @@ export default function Homepage() {
         />
       </div>
 
-      {/* Soft glass overlay */}
       <div className="absolute inset-0 z-[2] bg-white/35 backdrop-blur-[0.5px]" />
 
-      {/* Main content */}
       <div className="relative z-10">
         <motion.div
           className="fixed left-0 right-0 top-0 z-50 will-change-transform"
@@ -278,7 +347,6 @@ export default function Homepage() {
         </motion.div>
 
         <main className="relative overflow-hidden pt-[78px]">
-          {/* —— Hero + dashboard (two columns) —— */}
           <div className="relative w-full">
             <section className="relative w-full overflow-hidden">
               <motion.div
@@ -294,12 +362,15 @@ export default function Homepage() {
                       alt=""
                       loading={index === 0 ? "eager" : "lazy"}
                       className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-[1400ms] ease-in-out ${
-                        index === heroSlideIndex ? "z-[1] opacity-100" : "z-0 opacity-0"
+                        index === heroSlideIndex
+                          ? "z-[1] opacity-100"
+                          : "z-0 opacity-0"
                       }`}
                     />
                   ))}
                 </div>
               </motion.div>
+
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/65 to-slate-900/35" />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/50 to-transparent" />
 
@@ -315,17 +386,21 @@ export default function Homepage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
                       Research Collaboration Platform
                     </p>
+
                     <h1 className="mt-3 font-serif text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl">
                       Discover. Collaborate. Publish.
                     </h1>
+
                     <p className="mt-2 font-serif text-lg text-blue-100/90 sm:text-xl">
                       Powered by Research Connect
                     </p>
+
                     <p className="mt-5 max-w-xl text-sm leading-7 text-slate-200 sm:text-base">
                       Build meaningful academic partnerships, manage projects and
                       milestones, share datasets, find funding, and get AI-guided
                       support in one modern workspace.
                     </p>
+
                     <div className="mt-8 flex flex-wrap gap-4">
                       <button
                         type="button"
@@ -335,6 +410,7 @@ export default function Homepage() {
                         Get started
                         <ArrowRight className="h-4 w-4" />
                       </button>
+
                       <button
                         type="button"
                         onClick={scrollToFeatures}
@@ -343,6 +419,7 @@ export default function Homepage() {
                         Explore features
                       </button>
                     </div>
+
                     <div className="mt-10 flex flex-wrap items-center gap-6 text-white/95">
                       <div className="flex -space-x-3">
                         {["AI", "DS", "ML", "RC"].map((item) => (
@@ -354,10 +431,12 @@ export default function Homepage() {
                           </div>
                         ))}
                       </div>
+
                       <p className="max-w-xs text-sm text-slate-200">
                         For researchers, students, supervisors, and institutions.
                       </p>
                     </div>
+
                     <div className="mt-8 flex flex-wrap gap-8 border-t border-white/15 pt-8">
                       {heroStats.map((item) => (
                         <div key={item.label}>
@@ -392,6 +471,7 @@ export default function Homepage() {
                             One place for people, projects, data, and progress.
                           </p>
                         </div>
+
                         <Sparkles className="shrink-0 text-blue-600" size={22} />
                       </div>
 
@@ -504,7 +584,6 @@ export default function Homepage() {
             </section>
           </div>
 
-          {/* —— About (split layout) —— */}
           <motion.section
             className="border-t border-slate-200/80 bg-white py-14 sm:py-20"
             variants={staggerContainer}
@@ -525,18 +604,22 @@ export default function Homepage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/20 to-transparent" />
                 </motion.div>
+
                 <motion.div variants={fadeUpVariant} className="text-left">
                   <p className="text-sm font-medium italic text-blue-600">
                     Why Research Connect
                   </p>
+
                   <h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
                     About the platform
                   </h2>
+
                   <div className="mt-4 flex max-w-sm items-center gap-2">
                     <div className="h-px flex-1 bg-blue-200" />
                     <div className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
                     <div className="h-px flex-1 bg-blue-200" />
                   </div>
+
                   <p className="mt-5 text-sm leading-7 text-slate-600 sm:text-base">
                     Research Connect brings people, projects, and data together
                     in a single workspace. Whether you are forming a new team,
@@ -544,14 +627,16 @@ export default function Homepage() {
                     stays clear and calm—like a well-run lab notebook, but
                     online.
                   </p>
+
                   <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
                     We built it for the full academic workflow: discovery,
                     collaboration, secure sharing, and insight—without losing the
                     human side of research.
                   </p>
+
                   <button
                     type="button"
-                    onClick={() => navigate("/signup")}
+                    onClick={scrollToFooter}
                     className="mt-6 rounded-md bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
                   >
                     Get in touch
@@ -609,15 +694,13 @@ export default function Homepage() {
               variants={fadeUpVariant}
             >
               <div className="max-w-2xl">
-                <p className="text-sm font-medium italic text-blue-600">Visual research story</p>
+                <p className="text-sm font-medium italic text-blue-600">
+                  Visual research story
+                </p>
                 <h2 className="mt-2 font-serif text-2xl font-semibold text-slate-900 sm:text-3xl">
                   Academic, modern, and alive
                 </h2>
               </div>
-              <p className="max-w-xl text-sm leading-7 text-slate-600 sm:text-base">
-                Curated imagery keeps the experience human while matching your
-                existing clean, research-focused design language.
-              </p>
             </motion.div>
 
             <motion.div
@@ -638,8 +721,11 @@ export default function Homepage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/25 to-transparent" />
                   </div>
+
                   <div className="p-5">
-                    <h3 className="font-serif text-lg font-semibold text-slate-900">{card.title}</h3>
+                    <h3 className="font-serif text-lg font-semibold text-slate-900">
+                      {card.title}
+                    </h3>
                     <p className="mt-2 text-sm leading-7 text-slate-600">
                       {card.description}
                     </p>
@@ -664,9 +750,11 @@ export default function Homepage() {
               <div className="mb-3 text-sm font-semibold text-blue-600">
                 Comprehensive Workspace
               </div>
+
               <h2 className="font-serif text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
                 Everything you need to collaborate
               </h2>
+
               <p className="mt-4 text-base leading-8 text-slate-600">
                 Manage projects, people, datasets, funding opportunities,
                 academic resources, milestones, and AI guidance through a clean,
@@ -752,6 +840,53 @@ export default function Homepage() {
             </motion.div>
           </motion.section>
         </main>
+
+        <footer ref={footerRef} className="bg-slate-950 text-white mt-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10 py-10">
+            <div className="grid gap-8 md:grid-cols-3">
+              <div>
+                <h3 className="text-lg font-semibold">Research Connect</h3>
+                <p className="mt-3 text-sm text-slate-300 leading-6">
+                  A modern platform to connect researchers, manage projects,
+                  share datasets, and collaborate efficiently.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                  Contact
+                </h4>
+                <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                  <li>support@researchconnect.com</li>
+                  <li>admin@researchconnect.com</li>
+                  <li>collab@researchconnect.com</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                  Explore
+                </h4>
+                <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                  <li className="hover:text-white cursor-pointer">Projects</li>
+                  <li className="hover:text-white cursor-pointer">Researchers</li>
+                  <li className="hover:text-white cursor-pointer">Datasets</li>
+                  <li className="hover:text-white cursor-pointer">Funding</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-8 h-px w-full bg-slate-800" />
+
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+              <p>
+                © {new Date().getFullYear()} Research Connect. All rights
+                reserved.
+              </p>
+              <p>Built for academic collaboration and innovation.</p>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
