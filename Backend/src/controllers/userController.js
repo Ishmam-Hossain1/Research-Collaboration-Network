@@ -719,6 +719,7 @@
 import fs from "fs";
 import User from "../models/User.js";
 import { getGridFSBucket } from "../config/gridfs.js";
+import createNotification from "../utils/createNotification.js";
 
 const HF_API_URL = "https://router.huggingface.co/v1/chat/completions";
 const HF_MODEL = "openai/gpt-oss-20b";
@@ -1221,6 +1222,15 @@ export const acceptCollaborationRequest = async (req, res) => {
 
     await currentUser.save();
     await requesterUser.save();
+
+    await createNotification({
+      recipient: requesterUserId,
+      sender: currentUserId,
+      title: "Collaboration request accepted",
+      message: `${currentUser.username} accepted your collaboration request.`,
+      type: "collaboration",
+      link: `/researchers/${currentUserId}`,
+    });
 
     res.status(200).json({
       message: "Collaboration request accepted successfully",

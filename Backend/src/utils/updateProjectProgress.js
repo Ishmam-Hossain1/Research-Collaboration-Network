@@ -4,40 +4,29 @@ import Milestone from "../models/Milestone.js";
 const updateProjectProgress = async (projectId) => {
   const milestones = await Milestone.find({ projectId });
 
-  if (!milestones.length) {
-    await Project.findByIdAndUpdate(projectId, { progress: 0, status: "ongoing" });
-    return 0;
+  let progress = 0;
+
+  if (milestones.length > 0) {
+    const completedCount = milestones.filter(
+      (milestone) => milestone.status === "Completed"
+    ).length;
+
+    progress = Math.round((completedCount / milestones.length) * 100);
   }
 
-  let totalUnits = 0;
-  let completedUnits = 0;
+  const status =
+    milestones.length > 0 && progress === 100 ? "completed" : "ongoing";
 
-  for (const milestone of milestones) {
-    const weight = milestone.weight || 1;
+  const project = await Project.findByIdAndUpdate(
+    projectId,
+    {
+      progress,
+      status,
+    },
+    { new: true }
+  ).populate("owner", "username email");
 
-    if (milestone.subtasks && milestone.subtasks.length > 0) {
-      totalUnits += milestone.subtasks.length * weight;
-
-      milestone.subtasks.forEach((subtask) => {
-        if (subtask.completed) completedUnits += weight;
-      });
-    } else {
-      totalUnits += weight;
-      if (milestone.status === "Completed") completedUnits += weight;
-    }
-  }
-
-  const progress =
-    totalUnits === 0 ? 0 : Math.round((completedUnits / totalUnits) * 100);
-
-  const status = progress === 100 ? "completed" : "ongoing";
-
-  await Project.findByIdAndUpdate(projectId, {
-    progress,
-    status,
-  });
-
-  return progress;
+  return project;
 };
 
 export default updateProjectProgress;

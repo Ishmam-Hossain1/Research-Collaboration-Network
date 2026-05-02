@@ -16,6 +16,7 @@ import EditFunding from "./pages/EditFunding";
 import Resources from "./pages/Resources";
 import ProjectDetails from "./pages/ProjectDetails";
 import MilestonesPage from "./pages/MilestonesPage";
+import Conferences from "./pages/Conferences";
 import DatasetList from "./pages/DatasetList";
 import UploadDataset from "./pages/UploadDataset";
 import ApplyGrant from "./pages/ApplyGrant";
@@ -61,6 +62,28 @@ function AppRoutes() {
       <Route path="/funding" element={<Funding />} />
       <Route path="/funding/new" element={<CreateFunding />} />
       <Route path="/funding/edit/:id" element={<EditFunding />} />
+      <Route path="/projects/:id/milestones" element={<MilestonesPage />} />
+
+      {/* ✅ Conferences Page */}
+      <Route path="/conferences" element={<Conferences />} />
+
+      {/* ✅ Google Calendar Success Page */}
+      <Route
+        path="/calendar-connected"
+        element={
+          <div className="min-h-screen flex items-center justify-center bg-slate-50">
+            <div className="rounded-3xl bg-white p-8 shadow border">
+              <h1 className="text-2xl font-bold text-slate-900">
+                Google Calendar Connected
+              </h1>
+              <p className="mt-2 text-slate-600">
+                You can now add academic conferences and deadlines to your
+                calendar.
+              </p>
+            </div>
+          </div>
+        }
+      />
       <Route path="/resources" element={<Resources />} />
       <Route path="/funding/:id/apply" element={<ApplyGrant />} />
       <Route path="/grant-applications/mine" element={<MyGrantApplications />} />
