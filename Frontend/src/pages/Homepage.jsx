@@ -860,7 +860,8 @@ export default function Homepage() {
                   <li>ishmam604@gmail.com</li>
                   <li>farihaferdous777@gmail.com</li>
                   <li>alveeakhan@gmail.com</li>
-                  <li>researchconnect@gmail.com</li>
+                  <li>szabir18@gmail.com</li>
+                  {/* <li>researchconnect@gmail.com</li> */}
                 </ul>
               </div>
 
