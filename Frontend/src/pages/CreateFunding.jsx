@@ -82,9 +82,21 @@ const CreateFunding = ({ isOpen, onClose, onCreated }) => {
         headers: {
           "Content-Type": "application/json",
         },
+        // body: JSON.stringify({
+        //   ...formData,
+        //   fundingAmount: Number(formData.fundingAmount),
+        //   postedBy: currentUserId,
+        // }),
+        // body: JSON.stringify({
+        //   ...formData,
+        //   fundingAmount: Number(formData.fundingAmount),
+        //   deadline: new Date(formData.deadline).toISOString(),
+        //   postedBy: currentUserId,
+        // }),
         body: JSON.stringify({
           ...formData,
           fundingAmount: Number(formData.fundingAmount),
+          deadline: formData.deadline,
           postedBy: currentUserId,
         }),
       });

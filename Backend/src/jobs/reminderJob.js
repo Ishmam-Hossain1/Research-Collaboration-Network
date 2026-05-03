@@ -41,101 +41,77 @@ const alreadySent = async ({ type, targetId, email, daysBefore }) => {
   return false;
 };
 
-// const sendGrantDeadlineReminders = async () => {
-//   for (const daysBefore of REMINDER_DAYS) {
-//     const targetDate = addDays(new Date(), daysBefore);
-
-//     const opportunities = await FundingOpportunity.find({
-//       deadline: {
-//         $gte: startOfDay(targetDate),
-//         $lte: endOfDay(targetDate),
-//       },
-//     }).populate("postedBy", "username email");
-
-//     for (const funding of opportunities) {
-//       const applications = await GrantApplication.find({
-//         fundingOpportunity: funding._id,
-//         status: { $in: ["submitted", "under_review"] },
-//       }).populate("applicant", "username email");
-
-//       const recipients = new Map();
-
-//       if (funding.postedBy?.email) {
-//         recipients.set(funding.postedBy.email, funding.postedBy.username || "there");
-//       }
-
-//       applications.forEach((app) => {
-//         if (app.applicant?.email) {
-//           recipients.set(app.applicant.email, app.applicant.username || "there");
-//         }
-//       });
-
-//       for (const [email, name] of recipients.entries()) {
-//         const sent = await alreadySent({
-//           type: "grant_deadline",
-//           targetId: funding._id,
-//           email,
-//           daysBefore,
-//         });
-
-//         if (sent) continue;
-
-//         await sendEmail({
-//           to: email,
-//           subject: `Grant deadline reminder: ${funding.grantTitle}`,
-//           html: `
-//             <h2>Grant Deadline Reminder</h2>
-//             <p>Hello ${name},</p>
-//             <p>The grant <strong>${funding.grantTitle}</strong> deadline is in <strong>${daysBefore} day(s)</strong>.</p>
-//             <p><strong>Deadline:</strong> ${new Date(funding.deadline).toDateString()}</p>
-//             <p>Please review or complete any required actions before the deadline.</p>
-//             <p>— ResearchConnect</p>
-//           `,
-//         });
-//       }
-//     }
-//   }
-// };
 
 const sendGrantDeadlineReminders = async () => {
   const now = new Date();
 
-  for (const hoursBefore of REMINDER_HOURS) {
-    const targetTime = new Date(now.getTime() + hoursBefore * 60 * 60 * 1000);
+  const targetTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    const windowStart = new Date(targetTime.getTime() - 60 * 1000);
-    const windowEnd = new Date(targetTime.getTime() + 60 * 1000);
+  const windowStart = new Date(targetTime.getTime() - 60 * 1000);
+  const windowEnd = new Date(targetTime.getTime() + 60 * 1000);
 
-    const opportunities = await FundingOpportunity.find({
-      deadline: {
-        $gte: windowStart,
-        $lte: windowEnd,
-      },
-    }).populate("postedBy", "username email");
+  const opportunities = await FundingOpportunity.find({
+    deadline: {
+      $gte: windowStart,
+      $lte: windowEnd,
+    },
+  }).populate("postedBy", "username email");
 
-    for (const funding of opportunities) {
-      const applications = await GrantApplication.find({
-        fundingOpportunity: funding._id,
-        status: { $in: ["submitted", "under_review"] },
-      }).populate("applicant", "username email");
+  console.log(
+    `Grant reminder check: found ${opportunities.length} opportunities between ${windowStart.toLocaleString()} and ${windowEnd.toLocaleString()}`
+  );
 
-      const recipients = new Map();
+  for (const funding of opportunities) {
+    const applications = await GrantApplication.find({
+      fundingOpportunity: funding._id,
+      status: { $in: ["submitted", "under_review"] },
+    }).populate("applicant", "username email");
 
-      if (funding.postedBy?.email) {
-        recipients.set(funding.postedBy.email, funding.postedBy.username || "there");
+    const recipients = new Map();
+
+    if (funding.postedBy?.email) {
+      recipients.set(
+        funding.postedBy.email,
+        funding.postedBy.username || "there"
+      );
+    }
+
+    applications.forEach((app) => {
+      if (app.applicant?.email) {
+        recipients.set(app.applicant.email, app.applicant.username || "there");
+      }
+    });
+
+    console.log("Preparing grant reminder email for:", {
+      grantTitle: funding.grantTitle,
+      deadline: funding.deadline,
+      recipients: Array.from(recipients.keys()),
+    });
+
+    for (const [email, name] of recipients.entries()) {
+      const deadlineStamp = new Date(funding.deadline).getTime();
+      const reminderKey = `grant_deadline:${funding._id}:${email}:${deadlineStamp}:24_hours_before`;
+
+      const existing = await ReminderLog.findOne({ reminderKey });
+
+      if (existing) {
+        console.log(`Grant reminder already sent to ${email}`);
+        continue;
       }
 
-      applications.forEach((app) => {
-        if (app.applicant?.email) {
-          recipients.set(app.applicant.email, app.applicant.username || "there");
-        }
-      });
-
-      for (const [email, name] of recipients.entries()) {
-        const reminderKey = `grant_deadline:${funding._id}:${email}:24_hours_before`;
-
-        const existing = await ReminderLog.findOne({ reminderKey });
-        if (existing) continue;
+      try {
+        await sendEmail({
+          to: email,
+          subject: `Grant deadline reminder: ${funding.grantTitle}`,
+          html: `
+            <h2>Grant Deadline Reminder</h2>
+            <p>Hello ${name},</p>
+            <p>The grant <strong>${funding.grantTitle}</strong> deadline is in <strong>24 hours</strong>.</p>
+            <p><strong>Deadline:</strong> ${new Date(funding.deadline).toLocaleString()}</p>
+            <p>Please review or complete any required actions before the deadline.</p>
+            <p>— ResearchConnect</p>
+          `,
+        });
 
         await ReminderLog.create({
           type: "grant_deadline",
@@ -144,68 +120,16 @@ const sendGrantDeadlineReminders = async () => {
           reminderKey,
         });
 
-        await sendEmail({
-          to: email,
-          subject: `Grant deadline reminder: ${funding.grantTitle}`,
-          html: `
-            <h2>Grant Deadline Reminder</h2>
-            <p>Hello ${name},</p>
-            <p>The grant <strong>${funding.grantTitle}</strong> deadline is in approximately <strong>24 hours</strong>.</p>
-            <p><strong>Deadline:</strong> ${new Date(funding.deadline).toLocaleString()}</p>
-            <p>— ResearchConnect</p>
-          `,
-        });
+        console.log(`Grant reminder email successfully sent and logged for ${email}`);
+      } catch (error) {
+        console.error(
+          `Failed to send grant reminder email to ${email}:`,
+          error.message
+        );
       }
     }
   }
 };
-
-// const sendMilestoneDeadlineReminders = async () => {
-//   for (const daysBefore of REMINDER_DAYS) {
-//     const targetDate = addDays(new Date(), daysBefore);
-
-//     const milestones = await Milestone.find({
-//       status: { $ne: "Completed" },
-//       deadline: {
-//         $gte: startOfDay(targetDate),
-//         $lte: endOfDay(targetDate),
-//       },
-//     }).populate({
-//       path: "projectId",
-//       populate: {
-//         path: "owner",
-//         select: "username email",
-//       },
-//     });
-
-//     for (const milestone of milestones) {
-//       const owner = milestone.projectId?.owner;
-//       if (!owner?.email) continue;
-
-//       const sent = await alreadySent({
-//         type: "milestone_deadline",
-//         targetId: milestone._id,
-//         email: owner.email,
-//         daysBefore,
-//       });
-
-//       if (sent) continue;
-
-//       await sendEmail({
-//         to: owner.email,
-//         subject: `Milestone reminder: ${milestone.title}`,
-//         html: `
-//           <h2>Project Milestone Reminder</h2>
-//           <p>Hello ${owner.username || "there"},</p>
-//           <p>Your milestone <strong>${milestone.title}</strong> is due in <strong>${daysBefore} day(s)</strong>.</p>
-//           <p><strong>Project:</strong> ${milestone.projectId?.title || "Untitled Project"}</p>
-//           <p><strong>Deadline:</strong> ${new Date(milestone.deadline).toDateString()}</p>
-//           <p>— ResearchConnect</p>
-//         `,
-//       });
-//     }
-//   }
-// };
 
 const sendMilestoneDeadlineReminders = async () => {
   const now = new Date();
