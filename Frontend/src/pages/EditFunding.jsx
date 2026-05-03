@@ -14,6 +14,19 @@ import {
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
+const formatDateTimeLocal = (value) => {
+  if (!value) return "";
+
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 // const EditFunding = () => {
 //   const { id } = useParams();
 //   const navigate = useNavigate();
@@ -46,9 +59,10 @@ import Navbar from "../components/Navbar";
           setFormData({
             grantTitle: data.grantTitle || "",
             fundingAmount: data.fundingAmount || "",
-            deadline: data.deadline
-              ? new Date(data.deadline).toISOString().slice(0, 16)
-              : "",
+            // deadline: data.deadline
+            //   ? new Date(data.deadline).toISOString().slice(0, 16)
+            //   : "",
+            deadline: formatDateTimeLocal(data.deadline),
             eligibilityCriteria: data.eligibilityCriteria || "",
           });
         } else {
@@ -83,9 +97,19 @@ import Navbar from "../components/Navbar";
         headers: {
           "Content-Type": "application/json",
         },
+        // body: JSON.stringify({
+        //   ...formData,
+        //   fundingAmount: Number(formData.fundingAmount),
+        // }),
+        // body: JSON.stringify({
+        //   ...formData,
+        //   fundingAmount: Number(formData.fundingAmount),
+        //   deadline: new Date(formData.deadline).toISOString(),
+        // }),
         body: JSON.stringify({
           ...formData,
           fundingAmount: Number(formData.fundingAmount),
+          deadline: formData.deadline,
         }),
       });
 

@@ -53,7 +53,7 @@ const Navbar = () => {
         </Link>
 
         <Link to="/researchers" className={linkClass("/researchers")}>
-          Collaborate
+          Collaborators
         </Link>
 
         <Link to="/projects" className={linkClass("/projects")}>
@@ -160,8 +160,7 @@ const Navbar = () => {
     <span>Login</span>
   </Link>
 )}
-        </div>
-
+        
       </div>
     </header>
   );
