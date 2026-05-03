@@ -77,7 +77,7 @@ const CreateFunding = ({ isOpen, onClose, onCreated }) => {
     try {
       setLoading(true);
 
-      const response = await fetch("http://localhost:5000/api/funding", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/funding`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

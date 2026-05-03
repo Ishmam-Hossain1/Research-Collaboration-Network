@@ -19,7 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
 import SplashCursor from "../components/SplashCursor";
 
-const API = "http://localhost:5000";
+const API = `${import.meta.env.VITE_BACKEND_BASEURL}`;
 
 const fadeUpVariant = {
     hidden: { opacity: 0, y: 20 },

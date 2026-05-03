@@ -32,7 +32,7 @@ const Funding = () => {
 
   const getProfilePictureUrl = (profilePictureId) => {
     if (!profilePictureId) return null;
-    return `http://localhost:5000/api/auth/profile-picture/${profilePictureId}`;
+    return `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${profilePictureId}`;
   };
 
   const formatCurrency = (amount) => {
@@ -61,7 +61,7 @@ const Funding = () => {
 
   const fetchFundingOpportunities = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/funding");
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/funding`);
       const data = await response.json();
 
       if (response.ok) {
@@ -83,7 +83,7 @@ const Funding = () => {
       if (!token) return;
 
       const response = await fetch(
-        "http://localhost:5000/api/grant-applications/mine",
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/grant-applications/mine`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -123,7 +123,7 @@ const Funding = () => {
       setDeleteLoading(true);
 
       const response = await fetch(
-        `http://localhost:5000/api/funding/${selectedFundingId}`,
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/funding/${selectedFundingId}`,
         {
           method: "DELETE",
         }

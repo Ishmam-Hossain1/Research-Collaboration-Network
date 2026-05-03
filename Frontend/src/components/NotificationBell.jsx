@@ -24,7 +24,7 @@ export default function NotificationBell() {
 
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/notifications",
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/notifications`,
         authConfig
       );
 
@@ -42,7 +42,7 @@ export default function NotificationBell() {
 
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/notifications/unread-count",
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/notifications/unread-count`,
         authConfig
       );
 
@@ -72,7 +72,7 @@ export default function NotificationBell() {
 
     try {
       await axios.patch(
-        `http://localhost:5000/api/notifications/${notification._id}/read`,
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/notifications/${notification._id}/read`,
         {},
         authConfig
       );

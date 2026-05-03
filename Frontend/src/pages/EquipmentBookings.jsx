@@ -10,7 +10,7 @@ import {
   CreditCard, ArrowRight, ShieldCheck, Zap, User
 } from "lucide-react";
 
-const API = "http://localhost:5000";
+const API = `${import.meta.env.VITE_BACKEND_BASEURL}`;
 
 const STATUS_INFO = {
   pending: { className: "bg-amber-100 text-amber-700 border-amber-200", label: "Awaiting Review", icon: <Clock size={12} /> },
