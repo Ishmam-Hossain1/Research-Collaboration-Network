@@ -7,21 +7,25 @@ const projectSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
     abstract: {
       type: String,
       required: true,
       trim: true,
     },
+
     researchField: {
       type: String,
       required: true,
       trim: true,
     },
+
     status: {
       type: String,
       enum: ["ongoing", "completed"],
       default: "ongoing",
     },
+
     progress: {
       type: Number,
       default: 0,
@@ -34,16 +38,19 @@ const projectSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+
     methodology: {
       type: String,
       trim: true,
       default: "",
     },
+
     expectedOutcome: {
       type: String,
       trim: true,
       default: "",
     },
+
     fundingSource: {
       type: String,
       trim: true,
@@ -52,10 +59,11 @@ const projectSchema = new mongoose.Schema(
 
     collaborators: [
       {
-        type: String,
-        trim: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
       },
     ],
+
     keywords: [
       {
         type: String,
@@ -67,6 +75,7 @@ const projectSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
     endDate: {
       type: Date,
       default: null,

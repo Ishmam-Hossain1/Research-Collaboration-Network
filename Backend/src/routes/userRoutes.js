@@ -69,6 +69,7 @@ import {
   acceptCollaborationRequest,
   rejectCollaborationRequest,
   removeCollaborator,
+  removeProjectCollaboration,
   cancelSentCollaborationRequest,
   getSuggestedCollaborators,
   deleteUserProfile,
@@ -108,6 +109,8 @@ router.post("/reject-collaboration-request", rejectCollaborationRequest);
 
 // CANCEL SENT COLLABORATION REQUEST
 router.post("/collaboration-request/cancel", cancelSentCollaborationRequest);
+
+router.post("/project-collaboration/remove", removeProjectCollaboration);
 
 // Remove collaborator
 router.post("/remove-collaborator", removeCollaborator);
