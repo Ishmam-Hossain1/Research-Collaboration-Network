@@ -154,7 +154,7 @@
 //             <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border bg-slate-100">
 //               {otherUser?.profilePictureId ? (
 //                 <img
-//                   src={`http://localhost:5000/api/auth/profile-picture/${otherUser.profilePictureId}`}
+//                   src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${otherUser.profilePictureId}`}
 //                   className="h-full w-full object-cover"
 //                 />
 //               ) : (
@@ -417,6 +417,7 @@ const ChatWindow = () => {
               {otherUser?.profilePictureId ? (
                 <img
                   src={`${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${otherUser.profilePictureId}`}
+
                   className="h-full w-full object-cover"
                 />
               ) : (

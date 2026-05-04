@@ -1,7 +1,7 @@
 import { Box, MessageCircle, User, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useChatSidebar } from "../context/ChatSidebarContext";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
@@ -15,7 +15,9 @@ const Navbar = () => {
   const dropdownRef = useRef(null);
 
   const profilePictureUrl = user?.profilePictureId
-    ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${user.profilePictureId}`
+    ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${
+        user.profilePictureId
+      }`
     : null;
 
   const handleLogout = () => {
@@ -130,7 +132,7 @@ const Navbar = () => {
         </Link>
 
         <Link to="/researchers" className={linkClass("/researchers")}>
-          Collaborate
+          Collaborators
         </Link>
 
         <Link to="/projects" className={linkClass("/projects")}>

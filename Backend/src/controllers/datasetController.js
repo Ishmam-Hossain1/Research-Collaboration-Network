@@ -195,15 +195,20 @@ export const editDataset = async (req, res) => {
         }
 
         const dataset = await Dataset.findById(id);
-
         if (!dataset) {
             return res.status(404).json({ message: "Dataset not found" });
         }
 
         // Only the owner can edit
-        if (dataset.uploadedBy.toString() !== req.user._id.toString()) {
+        const ownerId = dataset.uploadedBy.toString();
+        const userId = req.user._id.toString();
+
+        if (ownerId !== userId) {
             return res.status(403).json({ message: "Not authorized to edit this dataset" });
         }
+
+        console.log("Edit Request Body:", req.body);
+        console.log("Edit Request File:", req.file);
 
         // Parse tags
         let parsedTags = dataset.tags;
@@ -249,6 +254,41 @@ export const editDataset = async (req, res) => {
             } else {
                 finalAllowedUsers = [];
             }
+        }
+
+        // Handle file upload if provided
+        if (req.file) {
+            const gfsBucket = getDatasetsBucket();
+            
+            // Delete old file if it exists
+            if (dataset.fileId) {
+                try {
+                    await gfsBucket.delete(new mongoose.Types.ObjectId(dataset.fileId));
+                } catch (err) {
+                    console.error("Error deleting old file:", err.message);
+                }
+            }
+
+            // Upload new file to GridFS
+            const uploadStream = gfsBucket.openUploadStream(req.file.originalname, {
+                contentType: req.file.mimetype,
+            });
+            const readStream = fs.createReadStream(req.file.path);
+
+            await new Promise((resolve, reject) => {
+                readStream.pipe(uploadStream).on("error", reject).on("finish", resolve);
+            });
+
+            // Clean up temp file
+            if (fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+
+            // Update file-related fields
+            dataset.fileId = uploadStream.id;
+            dataset.fileName = req.file.originalname;
+            dataset.fileSize = req.file.size;
+            dataset.mimeType = req.file.mimetype;
         }
 
         dataset.title = title || dataset.title;

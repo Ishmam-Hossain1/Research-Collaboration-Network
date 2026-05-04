@@ -857,9 +857,10 @@ export default function Homepage() {
                   Contact
                 </h4>
                 <ul className="mt-3 space-y-2 text-sm text-slate-300">
-                  <li>support@researchconnect.com</li>
-                  <li>admin@researchconnect.com</li>
-                  <li>collab@researchconnect.com</li>
+                  <li>ishmam604@gmail.com</li>
+                  <li>farihaferdous777@gmail.com</li>
+                  <li>alveeakhan@gmail.com</li>
+                  <li>szabir18@gmail.com</li>
                 </ul>
               </div>
 

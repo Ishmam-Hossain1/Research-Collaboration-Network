@@ -31,6 +31,7 @@ import EquipmentDetail from "./pages/EquipmentDetail";
 import ListEquipment from "./pages/ListEquipment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
+import PaymentFail from "./pages/PaymentFail";
 
 import {
   ChatSidebarProvider,
@@ -99,6 +100,7 @@ function AppRoutes() {
       <Route path="/equipment/:id" element={<EquipmentDetail />} />
       <Route path="/equipment/booking/payment-success" element={<PaymentSuccess />} />
       <Route path="/equipment/booking/payment-cancel" element={<PaymentCancel />} />
+      <Route path="/equipment/booking/payment-fail" element={<PaymentFail />} />
     </Routes>
   );
 }

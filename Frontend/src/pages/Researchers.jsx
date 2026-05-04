@@ -1023,45 +1023,6 @@ export default function Researchers() {
         </section>
       </main>
 
-      <footer className="mt-auto w-full border-t border-slate-200 bg-slate-50 py-12">
-        <div className="mx-auto flex max-w-[1280px] flex-col items-center justify-between gap-6 px-8 md:flex-row">
-          <div className="flex flex-col items-center md:items-start">
-            <span className="font-serif text-xl font-bold italic text-slate-900">
-              ResearchConnect
-            </span>
-            <p className="mt-2 text-sm text-slate-500">
-              © 2026 ResearchConnect. All rights reserved.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-8">
-            <a
-              className="text-sm text-slate-500 underline decoration-blue-500/30 underline-offset-4 transition-all hover:text-slate-900"
-              href="#"
-            >
-              About
-            </a>
-            <a
-              className="text-sm text-slate-500 underline decoration-blue-500/30 underline-offset-4 transition-all hover:text-slate-900"
-              href="#"
-            >
-              Methodology
-            </a>
-            <a
-              className="text-sm text-slate-500 underline decoration-blue-500/30 underline-offset-4 transition-all hover:text-slate-900"
-              href="#"
-            >
-              Privacy Policy
-            </a>
-            <a
-              className="text-sm text-slate-500 underline decoration-blue-500/30 underline-offset-4 transition-all hover:text-slate-900"
-              href="#"
-            >
-              Contact
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </div>
   );
 }

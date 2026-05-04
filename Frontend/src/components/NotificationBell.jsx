@@ -24,7 +24,11 @@ export default function NotificationBell() {
 
     try {
       const res = await axios.get(
+<<<<<<< HEAD
         `${import.meta.env.VITE_BACKEND_BASEURL}/api/notifications`,
+=======
+        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/notifications`,
+>>>>>>> 2b64cadba04286aafacfde64e93575934ff6c993
         authConfig
       );
 
@@ -42,7 +46,11 @@ export default function NotificationBell() {
 
     try {
       const res = await axios.get(
+<<<<<<< HEAD
         `${import.meta.env.VITE_BACKEND_BASEURL}/api/notifications/unread-count`,
+=======
+        (import.meta.env.VITE_API_URL || "http://localhost:5000") + "/api/notifications/unread-count",
+>>>>>>> 2b64cadba04286aafacfde64e93575934ff6c993
         authConfig
       );
 
@@ -72,7 +80,11 @@ export default function NotificationBell() {
 
     try {
       await axios.patch(
+<<<<<<< HEAD
         `${import.meta.env.VITE_BACKEND_BASEURL}/api/notifications/${notification._id}/read`,
+=======
+        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/notifications/${notification._id}/read`,
+>>>>>>> 2b64cadba04286aafacfde64e93575934ff6c993
         {},
         authConfig
       );
