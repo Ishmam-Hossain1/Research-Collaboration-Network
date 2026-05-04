@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
@@ -15,18 +15,23 @@ import {
   Tags,
   Landmark,
   FolderKanban,
-  ChevronRight,
+  ArrowRight,
   Atom,
   Dna,
   Telescope,
   Brain,
   Network,
   MessageSquareText,
+  UserPlus,
+  XCircle,
+  Trash2,
 } from "lucide-react";
 
 import Navbar from "../components/Navbar";
 import api from "../lib/api";
 import FeedbackModal from "../components/FeedbackModal";
+
+const API_BASE_URL = `${import.meta.env.VITE_BACKEND_BASEURL}/api`;
 
 const FloatingResearchDecor = () => {
   const items = [
@@ -78,6 +83,17 @@ const FloatingResearchDecor = () => {
             0%, 100% { transform: translateY(0px) scale(1); }
             50% { transform: translateY(-20px) scale(1.06); }
           }
+
+          @keyframes toastSlideDown {
+            0% {
+              opacity: 0;
+              transform: translate(-50%, -20px) scale(0.96);
+            }
+            100% {
+              opacity: 1;
+              transform: translate(-50%, 0) scale(1);
+            }
+          }
         `}
       </style>
 
@@ -103,18 +119,166 @@ const FloatingResearchDecor = () => {
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toastTimerRef = useRef(null);
+
+  const storedUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("researchConnectUser")) || null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
+  const [isRequestSent, setIsRequestSent] = useState(false);
+  const [checkingRequestStatus, setCheckingRequestStatus] = useState(false);
+  const [collaborationLoading, setCollaborationLoading] = useState(false);
+  const [collaboratorProfiles, setCollaboratorProfiles] = useState({});
+  const [removingCollaboratorId, setRemovingCollaboratorId] = useState("");
+
+  const [toast, setToast] = useState({
+    visible: false,
+    message: "",
+    type: "success",
+  });
+
+  const showToast = (message, type = "success") => {
+    if (!message) return;
+
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+
+    setToast({
+      visible: true,
+      message,
+      type,
+    });
+
+    toastTimerRef.current = setTimeout(() => {
+      setToast((prev) => ({
+        ...prev,
+        visible: false,
+      }));
+    }, 2600);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const getId = (value) => {
+    if (!value) return "";
+
+    if (typeof value === "string") return value;
+
+    if (value._id) {
+      if (typeof value._id === "string") return value._id;
+      if (value._id.$oid) return value._id.$oid;
+      return value._id.toString();
+    }
+
+    if (value.id) {
+      if (typeof value.id === "string") return value.id;
+      if (value.id.$oid) return value.id.$oid;
+      return value.id.toString();
+    }
+
+    return "";
+  };
+
+  const getCollaboratorDisplayObject = (collaborator) => {
+    if (!collaborator) return null;
+
+    if (typeof collaborator === "string") {
+      return (
+        collaboratorProfiles[collaborator] || {
+          _id: collaborator,
+          username: "",
+          email: "",
+          profilePictureId: null,
+        }
+      );
+    }
+
+    const collaboratorId = getId(collaborator);
+
+    if (
+      collaboratorId &&
+      (!collaborator.username || !collaborator.email) &&
+      collaboratorProfiles[collaboratorId]
+    ) {
+      return {
+        ...collaborator,
+        ...collaboratorProfiles[collaboratorId],
+      };
+    }
+
+    return collaborator;
+  };
+
+  const getCollaboratorProfilePictureUrl = (collaborator) => {
+    if (!collaborator?.profilePictureId) return "";
+    return `${API_BASE_URL}/auth/profile-picture/${collaborator.profilePictureId}`;
+  };
+
+  const getCollaboratorName = (collaborator, index) => {
+    const collaboratorObject = getCollaboratorDisplayObject(collaborator);
+
+    return (
+      collaboratorObject?.username ||
+      collaboratorObject?.name ||
+      collaboratorObject?.email ||
+      `Collaborator ${index + 1}`
+    );
+  };
+
+  const getCollaboratorEmail = (collaborator) => {
+    const collaboratorObject = getCollaboratorDisplayObject(collaborator);
+    return collaboratorObject?.email || "No email available";
+  };
+
+  const isSameId = (first, second) => {
+    const firstId = getId(first) || String(first || "");
+    const secondId = getId(second) || String(second || "");
+
+    return (
+      firstId &&
+      secondId &&
+      firstId.toString().trim() === secondId.toString().trim()
+    );
+  };
+
+  const isOldValidationMessage = (message) => {
+    const text = String(message || "").toLowerCase();
+
+    return (
+      text.includes("validation failed") &&
+      (text.includes("requestedcollaborations") ||
+        text.includes("sentcollaborations")) &&
+      text.includes("path") &&
+      (text.includes("project") || text.includes("user"))
+    );
+  };
+
   const fetchProjectDetails = async () => {
     try {
       setLoading(true);
+
       const res = await api.get(`/projects/${id}`);
-      setProject(res.data);
+      const projectData = res.data?.project || res.data;
+
+      setProject(projectData);
     } catch (error) {
       console.error("Failed to fetch project details", error);
+      showToast("Failed to load project details", "error");
     } finally {
       setLoading(false);
     }
@@ -123,6 +287,366 @@ const ProjectDetails = () => {
   useEffect(() => {
     fetchProjectDetails();
   }, [id]);
+
+  useEffect(() => {
+    const fetchMissingCollaboratorProfiles = async () => {
+      if (!project?.collaborators?.length) return;
+
+      const idsToFetch = project.collaborators
+        .map((collaborator) => getId(collaborator))
+        .filter(Boolean)
+        .filter((collaboratorId) => {
+          const originalCollaborator = project.collaborators.find(
+            (item) => getId(item) === collaboratorId
+          );
+
+          const alreadyHasUserData =
+            originalCollaborator &&
+            typeof originalCollaborator === "object" &&
+            (originalCollaborator.username || originalCollaborator.email);
+
+          return !alreadyHasUserData && !collaboratorProfiles[collaboratorId];
+        });
+
+      if (idsToFetch.length === 0) return;
+
+      try {
+        const uniqueIdsToFetch = [...new Set(idsToFetch)];
+
+        const results = await Promise.allSettled(
+          uniqueIdsToFetch.map((collaboratorId) =>
+            api.get(`/users/${collaboratorId}`)
+          )
+        );
+
+        const fetchedProfiles = {};
+
+        results.forEach((result, index) => {
+          if (result.status === "fulfilled") {
+            const collaboratorId = uniqueIdsToFetch[index];
+            fetchedProfiles[collaboratorId] = result.value.data;
+          }
+        });
+
+        if (Object.keys(fetchedProfiles).length > 0) {
+          setCollaboratorProfiles((prev) => ({
+            ...prev,
+            ...fetchedProfiles,
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch collaborator profiles", error);
+      }
+    };
+
+    fetchMissingCollaboratorProfiles();
+  }, [project?.collaborators]);
+
+  const projectOwnerId = getId(project?.owner);
+  const currentUserId = storedUser?.id || storedUser?._id || "";
+
+  const isOwnProject =
+    currentUserId &&
+    projectOwnerId &&
+    currentUserId.toString() === projectOwnerId.toString();
+
+  const isProjectCollaborator = useMemo(() => {
+    if (!currentUserId || !project?.collaborators?.length) return false;
+
+    return project.collaborators.some((collaborator) =>
+      isSameId(collaborator, currentUserId)
+    );
+  }, [project?.collaborators, currentUserId]);
+
+  const requestMatchesThisProject = (request) => {
+    if (!request) return false;
+
+    const requestReceiverId = getId(request.user || request);
+    const requestProjectId = getId(request.project);
+
+    return (
+      requestReceiverId &&
+      requestProjectId &&
+      requestReceiverId.toString() === projectOwnerId.toString() &&
+      requestProjectId.toString() === id.toString()
+    );
+  };
+
+  const fetchSentRequestStatus = async () => {
+    if (
+      !currentUserId ||
+      !projectOwnerId ||
+      !id ||
+      isOwnProject ||
+      isProjectCollaborator
+    ) {
+      setIsRequestSent(false);
+      return;
+    }
+
+    try {
+      setCheckingRequestStatus(true);
+
+      const sentRes = await api.get(
+        `/users/${currentUserId}/sent-collaboration-requests`
+      );
+
+      const sentRequests = sentRes.data?.requests || [];
+      const requestAlreadySent = sentRequests.some(requestMatchesThisProject);
+
+      setIsRequestSent(requestAlreadySent);
+    } catch (error) {
+      console.error("Failed to fetch sent collaboration request status", error);
+      setIsRequestSent(false);
+    } finally {
+      setCheckingRequestStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSentRequestStatus();
+  }, [currentUserId, projectOwnerId, id, isOwnProject, isProjectCollaborator]);
+
+  const handleSendCollaborationRequest = async () => {
+    const freshProjectOwnerId = getId(project?.owner);
+
+    if (!currentUserId) {
+      showToast("Please log in first", "error");
+      return;
+    }
+
+    if (!freshProjectOwnerId) {
+      showToast("Project owner not found", "error");
+      return;
+    }
+
+    if (!id) {
+      showToast("Project not found", "error");
+      return;
+    }
+
+    if (currentUserId.toString() === freshProjectOwnerId.toString()) {
+      showToast("You cannot collaborate with your own project", "error");
+      return;
+    }
+
+    if (isProjectCollaborator) {
+      showToast("You are already collaborating on this project", "error");
+      return;
+    }
+
+    try {
+      setCollaborationLoading(true);
+
+      await api.post("/users/collaboration-request", {
+        fromUserId: currentUserId,
+        toUserId: freshProjectOwnerId,
+        projectId: id,
+      });
+
+      setIsRequestSent(true);
+      showToast("Collaboration request sent successfully", "success");
+    } catch (error) {
+      console.error("Failed to send collaboration request", error);
+
+      const backendMessage =
+        error.response?.data?.message || "Failed to send collaboration request";
+
+      if (
+        backendMessage.toLowerCase().includes("already sent") ||
+        backendMessage
+          .toLowerCase()
+          .includes("collaboration request already sent") ||
+        isOldValidationMessage(backendMessage)
+      ) {
+        setIsRequestSent(true);
+        showToast("Collaboration request sent successfully", "success");
+        return;
+      }
+
+      showToast(backendMessage, "error");
+    } finally {
+      setCollaborationLoading(false);
+    }
+  };
+
+  const handleCancelCollaborationRequest = async () => {
+    const freshProjectOwnerId = getId(project?.owner);
+
+    if (!currentUserId) {
+      showToast("Please log in first", "error");
+      return;
+    }
+
+    if (!freshProjectOwnerId) {
+      showToast("Project owner not found", "error");
+      return;
+    }
+
+    if (!id) {
+      showToast("Project not found", "error");
+      return;
+    }
+
+    try {
+      setCollaborationLoading(true);
+
+      await api.post("/users/collaboration-request/cancel", {
+        fromUserId: currentUserId,
+        toUserId: freshProjectOwnerId,
+        projectId: id,
+      });
+
+      setIsRequestSent(false);
+      showToast("Collaboration request cancelled successfully", "success");
+    } catch (error) {
+      console.error("Failed to cancel collaboration request", error);
+
+      const backendMessage =
+        error.response?.data?.message ||
+        "Failed to cancel collaboration request";
+
+      if (
+        backendMessage.toLowerCase().includes("not found") ||
+        backendMessage.toLowerCase().includes("no pending") ||
+        isOldValidationMessage(backendMessage)
+      ) {
+        setIsRequestSent(false);
+        showToast("No pending request found", "success");
+        return;
+      }
+
+      showToast(backendMessage, "error");
+    } finally {
+      setCollaborationLoading(false);
+    }
+  };
+
+  const handleRemoveCollaboration = async () => {
+    if (!currentUserId) {
+      showToast("Please log in first", "error");
+      return;
+    }
+
+    if (!id) {
+      showToast("Project not found", "error");
+      return;
+    }
+
+    try {
+      setCollaborationLoading(true);
+
+      const res = await api.post("/users/project-collaboration/remove", {
+        currentUserId,
+        projectId: id,
+      });
+
+      const updatedProject = res.data?.project;
+
+      if (updatedProject) {
+        setProject(updatedProject);
+      } else {
+        await fetchProjectDetails();
+      }
+
+      setIsRequestSent(false);
+      showToast("Collaboration removed successfully", "success");
+    } catch (error) {
+      console.error("Failed to remove collaboration", error);
+
+      showToast(
+        error.response?.data?.message || "Failed to remove collaboration",
+        "error"
+      );
+    } finally {
+      setCollaborationLoading(false);
+    }
+  };
+
+  const handleOwnerRemoveCollaborator = async (collaboratorUserId) => {
+    if (!currentUserId) {
+      showToast("Please log in first", "error");
+      return;
+    }
+
+    if (!isOwnProject) {
+      showToast("Only the project owner can remove collaborators", "error");
+      return;
+    }
+
+    if (!id || !collaboratorUserId) {
+      showToast("Project or collaborator not found", "error");
+      return;
+    }
+
+    try {
+      setRemovingCollaboratorId(collaboratorUserId);
+
+      const res = await api.post("/users/project-collaboration/remove", {
+        currentUserId,
+        projectId: id,
+        collaboratorUserId,
+      });
+
+      const updatedProject = res.data?.project;
+
+      if (updatedProject) {
+        setProject(updatedProject);
+      } else {
+        setProject((prev) => ({
+          ...prev,
+          collaborators: (prev?.collaborators || []).filter(
+            (collaborator) => !isSameId(collaborator, collaboratorUserId)
+          ),
+        }));
+      }
+
+      showToast("Collaborator removed successfully", "success");
+    } catch (error) {
+      console.error("Failed to remove collaborator", error);
+
+      showToast(
+        error.response?.data?.message || "Failed to remove collaborator",
+        "error"
+      );
+    } finally {
+      setRemovingCollaboratorId("");
+    }
+  };
+
+  let CollaborationIcon = UserPlus;
+  let collaborationButtonLabel = "Collaborate";
+  let collaborationButtonClass =
+    "border-blue-100 bg-white/85 text-slate-700 hover:border-blue-300 hover:text-blue-700";
+  let collaborationButtonAction = handleSendCollaborationRequest;
+
+  if (isProjectCollaborator) {
+    CollaborationIcon = XCircle;
+    collaborationButtonLabel = collaborationLoading
+      ? "Removing..."
+      : "Remove Collaboration";
+    collaborationButtonClass =
+      "border-rose-200 bg-white/85 text-rose-600 hover:border-rose-300 hover:text-rose-700";
+    collaborationButtonAction = handleRemoveCollaboration;
+  } else if (isRequestSent) {
+    CollaborationIcon = XCircle;
+    collaborationButtonLabel = collaborationLoading
+      ? "Cancelling..."
+      : "Cancel Request";
+    collaborationButtonClass =
+      "border-orange-200 bg-white/85 text-orange-600 hover:border-orange-300 hover:text-orange-700";
+    collaborationButtonAction = handleCancelCollaborationRequest;
+  } else {
+    CollaborationIcon = UserPlus;
+    collaborationButtonLabel = collaborationLoading
+      ? "Sending..."
+      : "Collaborate";
+    collaborationButtonAction = handleSendCollaborationRequest;
+  }
+
+  if (checkingRequestStatus) {
+    collaborationButtonLabel = "Checking...";
+  }
 
   const formattedCreatedAt = useMemo(() => {
     if (!project?.createdAt) return "Not available";
@@ -205,6 +729,24 @@ const ProjectDetails = () => {
     <div className="relative min-h-screen overflow-hidden bg-[#eef5ff]">
       <Navbar />
       <FloatingResearchDecor />
+
+      {toast.visible && (
+        <div
+          className={`fixed left-1/2 top-5 z-[9999] flex max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-2xl border px-5 py-3 text-sm font-black shadow-[0_18px_45px_rgba(15,23,42,0.18)] backdrop-blur-xl ${
+            toast.type === "error"
+              ? "border-rose-200 bg-white text-rose-600"
+              : "border-emerald-200 bg-white text-emerald-700"
+          }`}
+          style={{ animation: "toastSlideDown 0.22s ease-out" }}
+        >
+          {toast.type === "error" ? (
+            <XCircle size={18} />
+          ) : (
+            <CheckCircle2 size={18} />
+          )}
+          <span className="whitespace-nowrap">{toast.message}</span>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-blue-300/40 blur-[120px]" />
@@ -298,13 +840,37 @@ const ProjectDetails = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => setFeedbackOpen(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-white/85 px-5 py-3 font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
-              >
-                <Star size={17} className="fill-amber-400 text-amber-400" />
-                Give Feedback
-              </button>
+              <div className="flex flex-col items-stretch gap-3 sm:items-end">
+                <div className="flex flex-wrap items-center justify-start gap-3 sm:justify-end">
+                  <button
+                    onClick={() => setFeedbackOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-100 bg-white/85 px-5 py-3 font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
+                  >
+                    <Star size={17} className="fill-amber-400 text-amber-400" />
+                    Give Feedback
+                  </button>
+
+                  {currentUserId && !isOwnProject && (
+                    <>
+                      <button
+                        onClick={collaborationButtonAction}
+                        disabled={collaborationLoading || checkingRequestStatus}
+                        className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 font-black shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 ${collaborationButtonClass}`}
+                      >
+                        <CollaborationIcon size={17} />
+                        {collaborationButtonLabel}
+                      </button>
+
+                      {isProjectCollaborator && (
+                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-emerald-700">
+                          <CheckCircle2 size={16} />
+                          Collaborating
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -411,33 +977,116 @@ const ProjectDetails = () => {
             </section>
 
             <section className="rounded-[30px] border border-white/80 bg-white/80 p-6 shadow-[0_20px_55px_rgba(37,99,235,0.10)] backdrop-blur-xl">
-              <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-2xl bg-emerald-100 p-3">
-                  <Users size={20} className="text-emerald-600" />
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-2xl bg-emerald-100 p-3">
+                    <Users size={20} className="text-emerald-600" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-950">
+                      Collaborators
+                    </h3>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                      Project research network
+                    </p>
+                  </div>
                 </div>
 
-                <h3 className="text-2xl font-black text-slate-950">
-                  Collaborators
-                </h3>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
+                  {project.collaborators?.length || 0}
+                </span>
               </div>
 
               {project.collaborators?.length ? (
                 <div className="space-y-3">
-                  {project.collaborators.map((collaborator, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-2xl border border-blue-100 bg-slate-50 px-4 py-3"
-                    >
-                      <span className="font-semibold text-slate-700">
-                        {collaborator}
-                      </span>
+                  {project.collaborators.map((collaborator, index) => {
+                    const collaboratorObject =
+                      getCollaboratorDisplayObject(collaborator);
+                    const collaboratorId = getId(collaboratorObject);
+                    const collaboratorName = getCollaboratorName(
+                      collaborator,
+                      index
+                    );
+                    const collaboratorEmail = getCollaboratorEmail(collaborator);
+                    const collaboratorPictureUrl =
+                      getCollaboratorProfilePictureUrl(collaboratorObject);
+                    const isRemovingThisCollaborator =
+                      removingCollaboratorId &&
+                      collaboratorId &&
+                      removingCollaboratorId.toString() ===
+                        collaboratorId.toString();
 
-                      <ChevronRight size={16} className="text-slate-400" />
-                    </div>
-                  ))}
+                    return (
+                      <div
+                        key={collaboratorId || index}
+                        className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+                      >
+                        <Link
+                          to={
+                            collaboratorId
+                              ? `/researchers/${collaboratorId}`
+                              : "#"
+                          }
+                          className="flex min-w-0 flex-1 items-center gap-4"
+                        >
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-emerald-100 text-lg font-black text-emerald-700">
+                            {collaboratorPictureUrl ? (
+                              <img
+                                src={collaboratorPictureUrl}
+                                alt={collaboratorName || "Collaborator"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              collaboratorName?.charAt(0).toUpperCase() || "U"
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-base font-black text-slate-900">
+                              {collaboratorName}
+                            </p>
+
+                            <p className="truncate text-sm font-semibold text-slate-500">
+                              {collaboratorEmail}
+                            </p>
+                          </div>
+
+                          <ArrowRight
+                            size={17}
+                            className="shrink-0 text-slate-400"
+                          />
+                        </Link>
+
+                        {isOwnProject && collaboratorId && (
+                          <button
+                            type="button"
+                            disabled={Boolean(isRemovingThisCollaborator)}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              handleOwnerRemoveCollaborator(collaboratorId);
+                            }}
+                            title="Remove collaborator"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-500 transition hover:border-rose-200 hover:bg-rose-100 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-slate-500">No collaborators added yet.</p>
+                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                  <Users size={22} className="mx-auto mb-2 text-slate-400" />
+                  <p className="text-sm font-bold text-slate-800">
+                    No collaborators yet
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Accepted project collaborators will appear here.
+                  </p>
+                </div>
               )}
             </section>
           </div>

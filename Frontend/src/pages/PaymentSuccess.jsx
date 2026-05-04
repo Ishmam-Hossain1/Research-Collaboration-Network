@@ -4,7 +4,7 @@ import axios from "axios";
 import { CheckCircle, ArrowRight, Loader2, Calendar, Cpu } from "lucide-react";
 import Navbar from "../components/Navbar";
 
-const API = "http://localhost:5000";
+const API = `${import.meta.env.VITE_BACKEND_BASEURL}`;
 
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();

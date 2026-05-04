@@ -28,7 +28,7 @@ import {
 import labBg from "../assets/chemistry-laboratory-with-colorful-liquids-and-glassware_70423754.jpg";
 import heroBg from "../assets/240_F_867695305_neYfOrKo5im0RxBj0QpDlc627zOSy4vF.jpg";
 
-const API = "http://localhost:5000";
+const API = `${import.meta.env.VITE_BACKEND_BASEURL}`;
 
 const CATEGORIES = [
   "All", "Microscopy", "Spectroscopy", "Chromatography", "Computing",

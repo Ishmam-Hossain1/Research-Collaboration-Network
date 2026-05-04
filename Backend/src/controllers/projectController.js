@@ -22,9 +22,30 @@ const buildSortOption = (sort) => {
 
 const normalizeArrayField = (value) => {
   if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item).trim()).filter(Boolean);
+};
+
+const normalizeObjectIdArray = (value) => {
+  if (!Array.isArray(value)) return [];
+
   return value
-    .map((item) => String(item).trim())
-    .filter(Boolean);
+    .map((item) => {
+      if (!item) return "";
+
+      if (typeof item === "string") return item;
+
+      if (item._id) return item._id.toString();
+      if (item.id) return item.id.toString();
+
+      return "";
+    })
+    .filter((id) => mongoose.Types.ObjectId.isValid(id));
+};
+
+const populateProject = (query) => {
+  return query
+    .populate("owner", "username email profilePictureId");
+    // .populate("collaborators", "username email profilePictureId researchInterests skills");
 };
 
 const addDays = (date, days) => {
@@ -177,13 +198,12 @@ export const createProject = async (req, res) => {
       abstract: abstract.trim(),
       researchField: researchField.trim(),
       status: status || "ongoing",
-      progress: 0,
       progress: progress ?? 0,
       objective: objective?.trim() || "",
       methodology: methodology?.trim() || "",
       expectedOutcome: expectedOutcome?.trim() || "",
       fundingSource: fundingSource?.trim() || "",
-      collaborators: normalizeArrayField(collaborators),
+      collaborators: normalizeObjectIdArray(collaborators),
       keywords: normalizeArrayField(keywords),
       startDate: startDate || null,
       endDate: endDate || null,
@@ -199,14 +219,11 @@ export const createProject = async (req, res) => {
 
     await Milestone.insertMany(milestonesToInsert);
 
-    const populatedProject = await Project.findById(newProject._id).populate(
-      "owner",
-      "username email"
+    const populatedProject = await populateProject(
+      Project.findById(newProject._id)
     );
 
     res.status(201).json({
-
-      message: "Project created successfully with default research milestones",
       message: "Project created successfully",
       project: populatedProject,
     });
@@ -234,9 +251,9 @@ export const getAllProjects = async (req, res) => {
     if (field) query.researchField = field;
     if (status) query.status = status;
 
-    const projects = await Project.find(query)
-      .populate("owner", "username email")
-      .sort(buildSortOption(sort));
+    const projects = await populateProject(
+      Project.find(query).sort(buildSortOption(sort))
+    );
 
     res.status(200).json(projects);
   } catch (error) {
@@ -263,9 +280,9 @@ export const getMyProjects = async (req, res) => {
     if (field) query.researchField = field;
     if (status) query.status = status;
 
-    const projects = await Project.find(query)
-      .populate("owner", "username email")
-      .sort(buildSortOption(sort));
+    const projects = await populateProject(
+      Project.find(query).sort(buildSortOption(sort))
+    );
 
     res.status(200).json(projects);
   } catch (error) {
@@ -282,10 +299,7 @@ export const getProjectById = async (req, res) => {
       return res.status(400).json({ message: "Invalid project id" });
     }
 
-    const project = await Project.findById(id).populate(
-      "owner",
-      "username email"
-    );
+    const project = await populateProject(Project.findById(id));
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
@@ -321,9 +335,9 @@ export const getProjectsByUser = async (req, res) => {
     if (field) query.researchField = field;
     if (status) query.status = status;
 
-    const projects = await Project.find(query)
-      .populate("owner", "username email")
-      .sort(buildSortOption(sort));
+    const projects = await populateProject(
+      Project.find(query).sort(buildSortOption(sort))
+    );
 
     res.status(200).json(projects);
   } catch (error) {
@@ -387,19 +401,23 @@ export const updateProject = async (req, res) => {
 
     if (title !== undefined) project.title = title.trim();
     if (abstract !== undefined) project.abstract = abstract.trim();
-    if (researchField !== undefined) project.researchField = researchField.trim();
+    if (researchField !== undefined) {
+      project.researchField = researchField.trim();
+    }
     if (status !== undefined) project.status = status;
-
-
     if (progress !== undefined) project.progress = progress;
 
     if (objective !== undefined) project.objective = objective.trim();
     if (methodology !== undefined) project.methodology = methodology.trim();
-    if (expectedOutcome !== undefined) project.expectedOutcome = expectedOutcome.trim();
-    if (fundingSource !== undefined) project.fundingSource = fundingSource.trim();
+    if (expectedOutcome !== undefined) {
+      project.expectedOutcome = expectedOutcome.trim();
+    }
+    if (fundingSource !== undefined) {
+      project.fundingSource = fundingSource.trim();
+    }
 
     if (collaborators !== undefined) {
-      project.collaborators = normalizeArrayField(collaborators);
+      project.collaborators = normalizeObjectIdArray(collaborators);
     }
 
     if (keywords !== undefined) {
@@ -410,9 +428,9 @@ export const updateProject = async (req, res) => {
     if (endDate !== undefined) project.endDate = endDate || null;
 
     const updatedProject = await project.save();
-    const populatedProject = await Project.findById(updatedProject._id).populate(
-      "owner",
-      "username email"
+
+    const populatedProject = await populateProject(
+      Project.findById(updatedProject._id)
     );
 
     res.status(200).json({
@@ -444,7 +462,6 @@ export const deleteProject = async (req, res) => {
         message: "Not authorized to delete this project",
       });
     }
-
 
     await Milestone.deleteMany({ projectId: id });
     await Project.findByIdAndDelete(id);

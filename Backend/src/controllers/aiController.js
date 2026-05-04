@@ -209,10 +209,33 @@ ${formatList(
       }),
     });
 
-    const data = await response.json();
+    // const data = await response.json();
+
+    // if (!response.ok) {
+    //   throw new Error(data?.error?.message || "AI request failed");
+    // }
+
+    const rawText = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { raw: rawText };
+    }
 
     if (!response.ok) {
-      throw new Error(data?.error?.message || "AI request failed");
+      console.error("HF AI request failed:", {
+        status: response.status,
+        statusText: response.statusText,
+        data,
+      });
+
+      return res.status(response.status).json({
+        message: "AI request failed",
+        status: response.status,
+        details: data,
+      });
     }
 
     const reply =

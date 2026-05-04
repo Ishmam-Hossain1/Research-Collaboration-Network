@@ -1,5 +1,22 @@
 import mongoose from "mongoose";
 
+const collaborationRequestSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    project: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     username: {
@@ -45,19 +62,15 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    requestedCollaborations: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    requestedCollaborations: {
+      type: [collaborationRequestSchema],
+      default: [],
+    },
 
-    sentCollaborations: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    sentCollaborations: {
+      type: [collaborationRequestSchema],
+      default: [],
+    },
 
     collaborators: [
       {

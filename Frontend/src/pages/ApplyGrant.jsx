@@ -51,7 +51,7 @@ const ApplyGrant = ({
     const fetchFunding = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/funding/${resolvedFundingId}`
+          `${import.meta.env.VITE_BACKEND_BASEURL}/api/funding/${resolvedFundingId}`
         );
         const data = await response.json();
 
@@ -130,7 +130,7 @@ const ApplyGrant = ({
       payload.append("proposal", formData.proposal);
 
       const response = await fetch(
-        "http://localhost:5000/api/grant-applications",
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/grant-applications`,
         {
           method: "POST",
           headers: {

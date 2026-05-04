@@ -6,7 +6,6 @@ import {
   Loader2,
   Sparkles,
   Target,
-  Users,
   Tags,
   CalendarDays,
   Landmark,
@@ -39,9 +38,7 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
   });
 
   const [customField, setCustomField] = useState("");
-  const [collaboratorInput, setCollaboratorInput] = useState("");
   const [keywordInput, setKeywordInput] = useState("");
-  const [collaborators, setCollaborators] = useState([]);
   const [keywords, setKeywords] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -64,7 +61,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
         endDate: project.endDate ? project.endDate.split("T")[0] : "",
       });
 
-      setCollaborators(project.collaborators || []);
       setKeywords(project.keywords || []);
 
       const knownField = RESEARCH_FIELDS.includes(project.researchField);
@@ -107,18 +103,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
       ...prev,
       researchField: customField.trim(),
     }));
-  };
-
-  const addCollaborator = () => {
-    const value = collaboratorInput.trim();
-    if (!value || collaborators.includes(value)) return;
-
-    setCollaborators((prev) => [...prev, value]);
-    setCollaboratorInput("");
-  };
-
-  const removeCollaborator = (value) => {
-    setCollaborators((prev) => prev.filter((item) => item !== value));
   };
 
   const addKeyword = () => {
@@ -171,7 +155,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
         methodology: formData.methodology.trim(),
         expectedOutcome: formData.expectedOutcome.trim(),
         fundingSource: formData.fundingSource.trim(),
-        collaborators,
         keywords,
         startDate: formData.startDate || null,
         endDate: formData.endDate || null,
@@ -485,41 +468,6 @@ const EditProjectModal = ({ isOpen, onClose, project, onProjectUpdated }) => {
                       />
                     </div>
                   </div>
-                </section>
-
-                <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-                  <div className="mb-4 flex items-center gap-2">
-                    <Users size={18} className="text-amber-600" />
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      Collaborators
-                    </h3>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={collaboratorInput}
-                      disabled={loading}
-                      onChange={(e) => setCollaboratorInput(e.target.value)}
-                      placeholder="Add collaborator name"
-                      className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={addCollaborator}
-                      disabled={loading}
-                      className="rounded-2xl bg-amber-600 px-5 py-3 font-medium text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  <TagList
-                    items={collaborators}
-                    onRemove={removeCollaborator}
-                    emptyText="No collaborators added yet"
-                  />
                 </section>
 
                 <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
