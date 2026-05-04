@@ -1,4 +1,4 @@
-import { MessageCircle, User, LogOut } from "lucide-react";
+import { Box, MessageCircle, User, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useChatSidebar } from "../context/ChatSidebarContext";
 import { useState, useRef, useEffect } from "react";
@@ -66,11 +66,62 @@ const Navbar = () => {
             background: transparent !important;
             box-shadow: none !important;
           }
+
+          .navbar-brand-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #020617;
+          }
+
+          .navbar-brand-icon {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            color: #020617;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            box-shadow: none;
+          }
+
+          .navbar-brand-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: #020617;
+            stroke-width: 2.5;
+          }
+
+          .navbar-brand-text {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            color: #020617;
+            text-transform: uppercase;
+            white-space: nowrap;
+          }
+
+          .navbar-brand-logo:hover .navbar-brand-icon {
+            color: #111827;
+          }
+
+          .navbar-brand-logo:hover .navbar-brand-icon svg {
+            stroke: #111827;
+          }
+
+          .navbar-brand-logo:hover .navbar-brand-text {
+            color: #111827;
+          }
         `}
       </style>
 
-      <Link to="/home" className="logo">
-        RESEARCH CONNECT
+      <Link to="/home" className="navbar-brand-logo">
+        <span className="navbar-brand-icon">
+          <Box size={24} />
+        </span>
+        <span className="navbar-brand-text">Research Connect</span>
       </Link>
 
       <nav className="nav-links">

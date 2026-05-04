@@ -1,9 +1,29 @@
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
+import LightRays from "../components/LightRays";
+
+function getArrayFromResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.projects)) return data.projects;
+  if (Array.isArray(data?.users)) return data.users;
+  if (Array.isArray(data?.researchers)) return data.researchers;
+  return [];
+}
+
+function formatCompactPlus(value) {
+  const safeValue = Number(value) || 0;
+
+  if (safeValue >= 1000) {
+    const compact = safeValue / 1000;
+    return `${Number.isInteger(compact) ? compact : compact.toFixed(1)}K+`;
+  }
+
+  return `${safeValue}+`;
+}
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -17,6 +37,48 @@ const Signup = () => {
   const [profilePicture, setProfilePicture] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const [counts, setCounts] = useState({
+    researchers: 0,
+    projects: 0,
+  });
+
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [projectsRes, usersRes] = await Promise.allSettled([
+          fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/projects`),
+          fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/users`),
+        ]);
+
+        let projectsCount = 0;
+        let researchersCount = 0;
+
+        if (projectsRes.status === "fulfilled" && projectsRes.value.ok) {
+          const projectsData = await projectsRes.value.json();
+          projectsCount = getArrayFromResponse(projectsData).length;
+        }
+
+        if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+          const usersData = await usersRes.value.json();
+          researchersCount = getArrayFromResponse(usersData).length;
+        }
+
+        setCounts({
+          researchers: researchersCount,
+          projects: projectsCount,
+        });
+      } catch (error) {
+        console.error("Error fetching signup counts:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -91,6 +153,131 @@ const Signup = () => {
             Sign In
           </Link>
         </>
+      }
+      rightSlot={
+        <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-sky-200 via-indigo-200 to-pink-200">
+          {/* background glows */}
+          <div className="pointer-events-none absolute -left-16 top-8 h-56 w-56 rounded-full bg-blue-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute right-0 top-24 h-72 w-72 rounded-full bg-fuchsia-300/20 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-cyan-300/20 blur-3xl" />
+
+          {/* rays from bottom-center */}
+          <div className="absolute inset-x-0 bottom-20 top-0 z-10">
+            <LightRays
+              raysOrigin="bottom-center"
+              raysColor="#ffffff"
+              raysSpeed={1.2}
+              lightSpread={0.95}
+              rayLength={2.6}
+              pulsating={true}
+              fadeDistance={1}
+              saturation={1}
+              followMouse={true}
+              mouseInfluence={0.06}
+              noiseAmount={0.015}
+              distortion={0.02}
+            />
+          </div>
+
+          {/* soft veil */}
+          <div className="absolute inset-0 z-[11] bg-white/8 backdrop-blur-[1px]" />
+
+          {/* floating glass card */}
+          <div className="absolute inset-0 z-20 flex items-center justify-center px-10 pb-20 pt-10">
+            <div className="w-full max-w-md animate-[floatCard_5s_ease-in-out_infinite] rounded-3xl border border-white/35 bg-white/22 p-8 text-slate-800 shadow-2xl backdrop-blur-md">
+              <div className="mb-4 inline-flex rounded-full bg-white/55 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+                Research Connect
+              </div>
+
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+                Join a smarter research network
+              </h2>
+
+              <p className="mt-4 text-sm leading-7 text-slate-700">
+                Create your profile, share your research interests, connect with
+                collaborators, and manage academic work from one modern platform.
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-white/35 bg-white/35 p-4">
+                  <div className="text-2xl font-bold text-slate-900">
+                    {statsLoading
+                      ? "..."
+                      : formatCompactPlus(counts.researchers)}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-700">
+                    Researchers
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/35 bg-white/35 p-4">
+                  <div className="text-2xl font-bold text-slate-900">
+                    {statsLoading ? "..." : formatCompactPlus(counts.projects)}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-700">Projects</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* book glow base */}
+          <div className="pointer-events-none absolute bottom-10 left-1/2 z-10 h-24 w-72 -translate-x-1/2 rounded-full bg-white/35 blur-2xl" />
+
+          {/* tailwind book */}
+          <div className="absolute bottom-8 left-1/2 z-30 -translate-x-1/2">
+            <div className="relative h-40 w-[340px]">
+              {/* shadow */}
+              <div className="absolute bottom-0 left-1/2 h-7 w-[270px] -translate-x-1/2 rounded-full bg-slate-900/20 blur-xl" />
+
+              {/* magical glow from spine */}
+              <div className="absolute bottom-14 left-1/2 h-16 w-20 -translate-x-1/2 rounded-full bg-white/80 blur-2xl" />
+              <div className="absolute bottom-16 left-1/2 h-24 w-36 -translate-x-1/2 rounded-full bg-cyan-200/60 blur-3xl" />
+
+              {/* left page */}
+              <div className="absolute bottom-6 left-[26px] h-24 w-[138px] origin-bottom-right skew-y-[-10deg] rounded-bl-[22px] rounded-tl-[14px] rounded-tr-[8px] border border-slate-300/70 bg-gradient-to-b from-white via-slate-50 to-slate-200 shadow-[0_10px_25px_rgba(15,23,42,0.18)]" />
+
+              {/* right page */}
+              <div className="absolute bottom-6 right-[26px] h-24 w-[138px] origin-bottom-left skew-y-[10deg] rounded-br-[22px] rounded-tr-[14px] rounded-tl-[8px] border border-slate-300/70 bg-gradient-to-b from-white via-slate-50 to-slate-200 shadow-[0_10px_25px_rgba(15,23,42,0.18)]" />
+
+              {/* left page lines */}
+              <div className="pointer-events-none absolute bottom-[52px] left-[48px] h-[2px] w-[86px] rounded-full bg-slate-300/70" />
+              <div className="pointer-events-none absolute bottom-[66px] left-[44px] h-[2px] w-[94px] rounded-full bg-slate-300/60" />
+              <div className="pointer-events-none absolute bottom-[80px] left-[40px] h-[2px] w-[98px] rounded-full bg-slate-300/50" />
+
+              {/* right page lines */}
+              <div className="pointer-events-none absolute bottom-[52px] right-[48px] h-[2px] w-[86px] rounded-full bg-slate-300/70" />
+              <div className="pointer-events-none absolute bottom-[66px] right-[44px] h-[2px] w-[94px] rounded-full bg-slate-300/60" />
+              <div className="pointer-events-none absolute bottom-[80px] right-[40px] h-[2px] w-[98px] rounded-full bg-slate-300/50" />
+
+              {/* center spine */}
+              <div className="absolute bottom-5 left-1/2 h-[92px] w-7 -translate-x-1/2 rounded-b-xl rounded-t-md bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900 shadow-lg" />
+
+              {/* cover edges */}
+              <div className="absolute bottom-4 left-[18px] h-5 w-[144px] skew-x-[-16deg] rounded-l-xl bg-slate-700/85" />
+              <div className="absolute bottom-4 right-[18px] h-5 w-[144px] skew-x-[16deg] rounded-r-xl bg-slate-700/85" />
+
+              {/* central book shine */}
+              <div className="pointer-events-none absolute bottom-[88px] left-1/2 h-10 w-10 -translate-x-1/2 rounded-full bg-white/90 blur-md" />
+
+              {/* small particles above book */}
+              <div className="absolute bottom-[118px] left-[110px] h-2.5 w-2.5 animate-pulse rounded-full bg-white/90 shadow-[0_0_18px_rgba(255,255,255,0.9)]" />
+              <div className="absolute bottom-[128px] left-1/2 h-2 w-2 -translate-x-1/2 animate-pulse rounded-full bg-cyan-100 shadow-[0_0_18px_rgba(255,255,255,0.9)]" />
+              <div className="absolute bottom-[116px] right-[112px] h-2.5 w-2.5 animate-pulse rounded-full bg-white/90 shadow-[0_0_18px_rgba(255,255,255,0.9)]" />
+            </div>
+          </div>
+
+          {/* local animation */}
+          <style>{`
+            @keyframes floatCard {
+              0%, 100% {
+                transform: translateY(0px);
+              }
+              50% {
+                transform: translateY(-10px);
+              }
+            }
+          `}</style>
+        </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -184,5 +371,3 @@ const Signup = () => {
 };
 
 export default Signup;
-
-
