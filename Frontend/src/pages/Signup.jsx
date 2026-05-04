@@ -121,11 +121,7 @@ const Signup = () => {
       }
 
       const res = await axios.post(
-<<<<<<< HEAD
         `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/signup`,
-=======
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/signup`,
->>>>>>> 2b64cadba04286aafacfde64e93575934ff6c993
         data,
         {
           headers: {
