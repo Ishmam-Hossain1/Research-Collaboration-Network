@@ -28,7 +28,7 @@ import SplashCursor from "../components/SplashCursor";
 import datasetBg from "../assets/dataset.webp";
 import pageBg from "../assets/datasetbackgroud..jpeg";
 
-const API = "http://localhost:5000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const accessBadge = {
     public: {
@@ -96,6 +96,7 @@ const DatasetList = () => {
     const [editEmailInput, setEditEmailInput] = useState("");
     const [editError, setEditError] = useState("");
     const [isEditing, setIsEditing] = useState(false);
+    const [editFile, setEditFile] = useState(null);
 
     const token = localStorage.getItem("researchConnectToken");
     const currentUser = useMemo(() => {
@@ -209,6 +210,7 @@ const DatasetList = () => {
         setEditAllowedEmails(ds.allowedUsers?.map(u => u.email) || []);
         setEditEmailInput("");
         setEditError("");
+        setEditFile(null);
     };
 
     const handleEditAddEmail = (e) => {
@@ -224,13 +226,26 @@ const DatasetList = () => {
         e.preventDefault();
         setIsEditing(true);
         try {
-            const data = {
-                ...editFormData,
-                tags: editFormData.tags.split(",").map(t => t.trim()).filter(Boolean),
-                allowedUsers: editFormData.accessControl === "restricted" ? JSON.stringify(editAllowedEmails) : undefined,
-            };
-            await axios.put(`${API}/api/datasets/${editingDataset._id}`, data, { headers: authHeaders });
+            const formData = new FormData();
+            formData.append("title", editFormData.title);
+            formData.append("description", editFormData.description);
+            formData.append("tags", JSON.stringify(editFormData.tags.split(",").map(t => t.trim()).filter(Boolean)));
+            formData.append("accessControl", editFormData.accessControl);
+            
+            if (editFormData.accessControl === "restricted") {
+                formData.append("allowedUsers", JSON.stringify(editAllowedEmails));
+            }
+            
+            if (editFile) {
+                formData.append("file", editFile);
+            }
+
+            await axios.put(`${API}/api/datasets/${editingDataset._id}`, formData, { 
+                headers: authHeaders 
+            });
+            
             setEditingDataset(null);
+            setEditFile(null);
             fetchDatasets();
         } catch (err) {
             setEditError(err.response?.data?.message || "Failed to update.");
@@ -561,6 +576,21 @@ const DatasetList = () => {
                                             className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
                                         />
                                     </div>
+                                    <div className="md:col-span-2">
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Replace Dataset File (Optional)</label>
+                                        <div className="relative group">
+                                            <input
+                                                type="file"
+                                                onChange={(e) => setEditFile(e.target.files[0])}
+                                                className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-sm font-medium text-slate-600 focus:border-blue-500 focus:bg-white focus:outline-none transition-all cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            />
+                                            {editFile && (
+                                                <p className="mt-2 text-xs font-bold text-blue-600 flex items-center gap-1">
+                                                    Selected: {editFile.name} ({(editFile.size / 1024 / 1024).toFixed(2)} MB)
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {editFormData.accessControl === "restricted" && (
@@ -590,8 +620,20 @@ const DatasetList = () => {
                                 <div className="pt-4 flex gap-3">
                                     <button
                                         type="button"
+                                        onClick={() => {
+                                            if (window.confirm("Delete this dataset entirely?")) {
+                                                handleDelete(editingDataset._id);
+                                                setEditingDataset(null);
+                                            }
+                                        }}
+                                        className="flex-1 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-xs font-bold text-rose-600 hover:bg-rose-100 transition flex items-center justify-center gap-2"
+                                    >
+                                        <Trash2 size={16} /> Delete
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => setEditingDataset(null)}
-                                        className="flex-1 rounded-2xl border border-slate-200 px-6 py-4 text-sm font-bold text-slate-600 hover:bg-slate-50 transition"
+                                        className="flex-1 rounded-2xl border border-slate-200 px-4 py-4 text-xs font-bold text-slate-600 hover:bg-slate-50 transition"
                                     >
                                         Dismiss
                                     </button>
@@ -600,7 +642,7 @@ const DatasetList = () => {
                                         disabled={isEditing}
                                         className="flex-[2] rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 text-sm font-bold text-white shadow-xl shadow-blue-500/30 hover:from-blue-500 hover:to-indigo-600 transition disabled:opacity-50"
                                     >
-                                        {isEditing ? "Optimizing..." : "Save Metadata"}
+                                        {isEditing ? "Optimizing..." : "Save Changes"}
                                     </button>
                                 </div>
                             </form>

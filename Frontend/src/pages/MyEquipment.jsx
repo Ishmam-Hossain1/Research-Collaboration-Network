@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import inventoryBg from "../assets/inventory.jpg";
 
-const API = "http://localhost:5000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const STATUS_STYLES = {
   pending: { className: "bg-amber-100 text-amber-700 border-amber-200", label: "Pending Review" },

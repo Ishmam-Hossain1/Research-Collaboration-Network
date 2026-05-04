@@ -7,7 +7,7 @@ import SplashCursor from "../components/SplashCursor";
 import {
   ArrowLeft, MapPin, CheckCircle, XCircle, Wrench, Gift,
   Zap, Calendar, Clock, User, Send, AlertTriangle, ChevronLeft, ChevronRight,
-  Info, Tag, BookOpen, Layers, ShieldCheck, ArrowRight, RefreshCw, X
+  Info, Tag, BookOpen, Layers, ShieldCheck, ArrowRight, RefreshCw, X, Star, MessageSquare
 } from "lucide-react";
 
 
@@ -39,41 +39,127 @@ const STATUS_STYLES = {
   },
 };
 
-// Modernized high-visibility calendar
+// ─── Reviews Section Component ───────────────────────────────────────────────
+function ReviewsSection({ reviews, loading }) {
+  if (loading) return (
+    <div className="flex justify-center py-10">
+      <RefreshCw size={28} className="animate-spin text-blue-400 opacity-40" />
+    </div>
+  );
+
+  const avgRating = reviews.length
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
+
+  return (
+    <section className="rounded-[32px] border border-slate-200 bg-white p-10 shadow-lg">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+            <Star size={26} fill="currentColor" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-serif font-bold text-slate-800">User Reviews</h2>
+            <p className="text-xs font-medium text-slate-400 mt-0.5">From verified rental completions</p>
+          </div>
+        </div>
+        {avgRating && (
+          <div className="flex flex-col items-end">
+            <span className="text-4xl font-serif font-bold text-slate-800">{avgRating}</span>
+            <div className="flex gap-0.5 mt-1">
+              {[1,2,3,4,5].map((s) => (
+                <Star key={s} size={14}
+                  className={parseFloat(avgRating) >= s ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-1">
+              {reviews.length} review{reviews.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {reviews.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 py-12 text-center">
+          <MessageSquare size={40} className="text-slate-200" />
+          <p className="text-sm font-bold text-slate-400">No reviews yet</p>
+          <p className="text-xs text-slate-300 max-w-xs">
+            Reviews appear here after users complete their rental.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {reviews.map((review) => (
+            <motion.div
+              key={review._id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-[20px] border border-slate-100 bg-slate-50/50 p-6 hover:bg-white hover:shadow-md transition-all"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-[14px] bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow">
+                    {review.user?.username?.[0]?.toUpperCase() || "?"}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{review.user?.username || "Anonymous"}</p>
+                    <p className="text-[10px] font-medium text-slate-400">
+                      {new Date(review.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                    </p>
+                  </div>
+                </div>
+                {/* Stars */}
+                <div className="flex gap-0.5 shrink-0">
+                  {[1,2,3,4,5].map((s) => (
+                    <Star key={s} size={14}
+                      className={review.rating >= s ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+                    />
+                  ))}
+                </div>
+              </div>
+              {review.comment && (
+                <p className="mt-4 text-sm leading-relaxed text-slate-600 font-medium italic pl-2 border-l-2 border-amber-200">
+                  "{review.comment}"
+                </p>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Availability Calendar — timezone-safe (pure string comparison, no Date objects for range checks)
 function AvailabilityCalendar({ approvedDates, blockedDates, availabilitySchedule }) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // todayStr is always the LOCAL date in YYYY-MM-DD — no UTC shift issues
+  const todayStr = today.toLocaleDateString("sv-SE"); // sv-SE locale = "YYYY-MM-DD"
+
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
 
   const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
-  const isBooked = (date) => {
-    const d = new Date(date);
-    d.setHours(0,0,0,0);
-    return approvedDates.some((b) => {
-      const start = new Date(b.startDate);
-      start.setHours(0,0,0,0);
-      const end = new Date(b.endDate);
-      end.setHours(0,0,0,0);
-      return d >= start && d <= end;
+  // ── Pure string comparisons — immune to timezone offsets ──────────────────
+  const isBooked = (dateStr) =>
+    approvedDates.some((b) => {
+      const start = (b.startDate || "").slice(0, 10);
+      const end   = (b.endDate   || "").slice(0, 10);
+      return start && end && dateStr >= start && dateStr <= end;
     });
-  };
 
-  const isBlocked = (date) => {
-    const d = new Date(date);
-    d.setHours(0,0,0,0);
-    return (blockedDates || []).some((b) => {
-      const start = new Date(b.start);
-      start.setHours(0,0,0,0);
-      const end = new Date(b.end);
-      end.setHours(0,0,0,0);
-      return d >= start && d <= end;
+  const isBlocked = (dateStr) =>
+    (blockedDates || []).some((b) => {
+      const start = (b.start || "").slice(0, 10);
+      const end   = (b.end   || "").slice(0, 10);
+      return start && end && dateStr >= start && dateStr <= end;
     });
-  };
 
-  const isPast = (date) => new Date(date) < today;
+  const isPast = (dateStr) => dateStr < todayStr;
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
@@ -118,34 +204,45 @@ function AvailabilityCalendar({ approvedDates, blockedDates, availabilitySchedul
       <div className="grid grid-cols-7 gap-2.5 text-center">
         {cells.map((day, i) => {
           if (!day) return <div key={`empty-${i}`} />;
+
+          // Build a local YYYY-MM-DD string — same format used in comparisons
           const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const d = new Date(viewYear, viewMonth, day);
-          const past = isPast(dateStr);
-          const booked = isBooked(dateStr);
+          // Use local Date only for dayOfWeek (getDay() is always local)
+          const dayOfWeek = new Date(viewYear, viewMonth, day).getDay();
+
+          const past          = isPast(dateStr);
+          const booked        = isBooked(dateStr);
           const blockedByDate = isBlocked(dateStr);
-          
+
           const hasSchedule = availabilitySchedule && availabilitySchedule.length > 0;
-          const isOffDay = hasSchedule && !availabilitySchedule.some(slot => slot.dayOfWeek === d.getDay());
-          
-          const blocked = blockedByDate || isOffDay;
+          const isOffDay    = hasSchedule && !availabilitySchedule.some(slot => slot.dayOfWeek === dayOfWeek);
+          const blocked     = blockedByDate || isOffDay;
 
           let cls = "h-10 flex items-center justify-center rounded-2xl text-[11px] font-black transition-all duration-300 ";
-          
+
           if (past) {
             cls += "text-slate-200 cursor-default opacity-40";
           } else if (booked) {
-            cls += "bg-rose-600 text-white shadow-lg shadow-rose-200 scale-95 ring-2 ring-rose-100 ring-offset-2 ring-offset-white cursor-help";
+            // 🔴 Reserved / Paid booking
+            cls += "bg-rose-600 text-white shadow-lg shadow-rose-200 scale-95 ring-2 ring-rose-100 ring-offset-2 ring-offset-white cursor-not-allowed";
           } else if (blocked) {
-            cls += "bg-amber-500 text-white shadow-lg shadow-amber-200 scale-95 ring-2 ring-amber-100 ring-offset-2 ring-offset-white cursor-help";
+            // 🟡 Blocked / maintenance / off-day
+            cls += "bg-amber-500 text-white shadow-lg shadow-amber-200 scale-95 ring-2 ring-amber-100 ring-offset-2 ring-offset-white cursor-not-allowed";
           } else {
+            // 🔵 Free / available
             cls += "bg-blue-600 text-white hover:bg-blue-500 cursor-pointer hover:shadow-lg hover:shadow-blue-200 hover:-translate-y-0.5 active:scale-90 shadow-md shadow-blue-900/10";
           }
 
           return (
-            <div 
-              key={dateStr} 
-              className={cls} 
-              title={booked ? "Reserved" : blocked ? "Unavailable" : past ? "Historical Date" : "Available"}
+            <div
+              key={dateStr}
+              className={cls}
+              title={
+                booked  ? "Reserved — already booked" :
+                blocked ? "Unavailable / Blocked" :
+                past    ? "Past date" :
+                          "Available"
+              }
             >
               {day}
             </div>
@@ -153,11 +250,12 @@ function AvailabilityCalendar({ approvedDates, blockedDates, availabilitySchedul
         })}
       </div>
 
+      {/* Legend */}
       <div className="mt-10 grid grid-cols-3 gap-3">
         {[
-          { color: "bg-blue-600", label: "Free", sub: "Open" },
-          { color: "bg-rose-600", label: "Booked", sub: "Taken" },
-          { color: "bg-amber-500", label: "Blocked", sub: "Closed" },
+          { color: "bg-blue-600",  label: "Free",    sub: "Available" },
+          { color: "bg-rose-600",  label: "Booked",  sub: "Reserved"  },
+          { color: "bg-amber-500", label: "Blocked", sub: "Closed"    },
         ].map(({ color, label, sub }) => (
           <div key={label} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-100">
             <span className={`h-2 w-2 rounded-full ${color} shadow-sm shadow-black/10`} />
@@ -180,6 +278,8 @@ const EquipmentDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [approvedDates, setApprovedDates] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
   // Booking form
@@ -214,7 +314,23 @@ const EquipmentDetail = () => {
         setLoading(false);
       }
     };
-    if (id) fetchAll();
+
+    const fetchReviews = async () => {
+      setReviewsLoading(true);
+      try {
+        const res = await api.get(`/equipment/${id}/reviews`);
+        setReviews(res.data);
+      } catch (err) {
+        console.error("Failed to load reviews:", err.message);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchAll();
+      fetchReviews();
+    }
   }, [id, authHeaders]);
 
   const handleBookingChange = (e) => {
@@ -443,6 +559,9 @@ const EquipmentDetail = () => {
                         ))}
                       </div>
                     )}
+
+                    {/* ─── Reviews ─── */}
+                    <ReviewsSection reviews={reviews} loading={reviewsLoading} />
                   </motion.div>
                 )}
 

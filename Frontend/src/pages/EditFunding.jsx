@@ -52,7 +52,7 @@ const formatDateTimeLocal = (value) => {
   useEffect(() => {
     const fetchFundingById = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/funding/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/funding/${id}`);
         const data = await response.json();
 
         if (response.ok) {
@@ -92,7 +92,7 @@ const formatDateTimeLocal = (value) => {
     try {
       setUpdateLoading(true);
 
-      const response = await fetch(`http://localhost:5000/api/funding/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/funding/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

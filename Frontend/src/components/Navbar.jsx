@@ -15,7 +15,7 @@ const Navbar = () => {
   const dropdownRef = useRef(null);
 
   const profilePictureUrl = user?.profilePictureId
-    ? `http://localhost:5000/api/auth/profile-picture/${user.profilePictureId}`
+    ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${user.profilePictureId}`
     : null;
 
   const handleLogout = () => {

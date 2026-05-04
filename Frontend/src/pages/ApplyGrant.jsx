@@ -23,7 +23,7 @@
 //   useEffect(() => {
 //     const fetchFunding = async () => {
 //       try {
-//         const response = await fetch(`http://localhost:5000/api/funding/${id}`);
+//         const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/funding/${id}`);
 //         const data = await response.json();
 
 //         if (response.ok) {
@@ -90,7 +90,7 @@
 //       payload.append("researchField", formData.researchField);
 //       payload.append("proposal", formData.proposal);
 
-//       const response = await fetch("http://localhost:5000/api/grant-applications", {
+//       const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/grant-applications`, {
 //         method: "POST",
 //         headers: {
 //           Authorization: `Bearer ${token}`,
@@ -357,7 +357,7 @@ const ApplyGrant = ({
     const fetchFunding = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/funding/${resolvedFundingId}`
+          `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/funding/${resolvedFundingId}`
         );
         const data = await response.json();
 
@@ -436,7 +436,7 @@ const ApplyGrant = ({
       payload.append("proposal", formData.proposal);
 
       const response = await fetch(
-        "http://localhost:5000/api/grant-applications",
+        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/grant-applications`,
         {
           method: "POST",
           headers: {

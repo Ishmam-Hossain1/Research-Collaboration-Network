@@ -226,10 +226,10 @@ export default function Homepage() {
       try {
         const [projectsRes, usersRes, datasetsRes, resourcesRes] =
           await Promise.allSettled([
-            fetch("http://localhost:5000/api/projects"),
-            fetch("http://localhost:5000/api/users"),
-            fetch("http://localhost:5000/api/datasets"),
-            fetch("http://localhost:5000/api/resources"),
+            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/projects`),
+            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users`),
+            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/datasets`),
+            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/resources`),
           ]);
 
         let projectsCount = 0;
@@ -860,7 +860,7 @@ export default function Homepage() {
                   <li>ishmam604@gmail.com</li>
                   <li>farihaferdous777@gmail.com</li>
                   <li>alveeakhan@gmail.com</li>
-                  <li>researchconnect@gmail.com</li>
+                  <li>szabir18@gmail.com</li>
                 </ul>
               </div>
 
