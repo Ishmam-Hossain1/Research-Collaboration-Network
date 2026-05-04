@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
 import SplashCursor from "../components/SplashCursor";
@@ -10,7 +10,7 @@ import {
   CreditCard, ArrowRight, ShieldCheck, Zap, User
 } from "lucide-react";
 
-const API = "http://localhost:5000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const STATUS_INFO = {
   pending: { className: "bg-amber-100 text-amber-700 border-amber-200", label: "Awaiting Review", icon: <Clock size={12} /> },
@@ -244,13 +244,20 @@ function BookingCard({ booking, onCancel, onRate, onPay }) {
                 )}
 
                 {booking.status === "completed" && booking.rating && (
-                  <div className="flex items-center gap-3 rounded-2xl bg-white/50 p-4 border border-slate-100">
-                    <div className="flex">
-                      {[1,2,3,4,5].map((s) => (
-                        <Star key={s} size={14} className={s <= booking.rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
-                      ))}
+                  <div className="rounded-2xl bg-white/50 p-4 border border-slate-100 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex">
+                        {[1,2,3,4,5].map((s) => (
+                          <Star key={s} size={14} className={s <= booking.rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
+                        ))}
+                      </div>
+                      <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Verified Feedback</span>
                     </div>
-                    <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Verified Feedback</span>
+                    {booking.reviewComment && (
+                      <p className="text-xs text-slate-500 font-medium italic pl-2 border-l-2 border-amber-200 leading-relaxed">
+                        "{booking.reviewComment}"
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -268,6 +275,7 @@ const EquipmentBookings = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [toast, setToast] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const currentUser = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("researchConnectUser") || "null"); }
@@ -284,6 +292,27 @@ const EquipmentBookings = () => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  useEffect(() => {
+    const success = searchParams.get("payment_success");
+    const fail = searchParams.get("payment_fail");
+
+    if (success) {
+      showToast("Payment confirmed! Your booking is now completed.", "success");
+      searchParams.delete("payment_success");
+      setSearchParams(searchParams);
+    } else if (fail) {
+      const reason = searchParams.get("reason");
+      if (reason === "no_tran_id") {
+        showToast("Payment verification skipped (No Transaction ID). If you paid, it will update shortly.", "warning");
+      } else {
+        showToast("Payment failed or was cancelled.", "error");
+      }
+      searchParams.delete("payment_fail");
+      searchParams.delete("reason");
+      setSearchParams(searchParams);
+    }
+  }, [searchParams, setSearchParams]);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);

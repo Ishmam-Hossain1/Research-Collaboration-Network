@@ -1,3 +1,5 @@
+import SSLCommerzPayment from "sslcommerz-lts";
+import { protect, optionalProtect } from "../middleware/authMiddleware.js";
 import Equipment from "../models/Equipment.js";
 import EquipmentBooking from "../models/EquipmentBooking.js";
 import EquipmentReview from "../models/EquipmentReview.js";
@@ -219,10 +221,15 @@ async function hasConflict(equipmentId, startDate, endDate, excludeBookingId = n
     }
   }
 
-  // 3. Check existing approved/pending bookings
+  // 3. Check existing bookings that block the dates:
+  //    - "approved"        = owner approved, awaiting payment  
+  //    - "pending_payment" = payment in progress (do not allow double-booking)
+  //    - "completed"       = payment confirmed → RESERVED
+  //    - "pending"         = not yet approved (still block to avoid race conditions)
+  const BLOCKING_STATUSES = ["approved", "pending", "pending_payment", "completed"];
   const query = {
     equipment: equipmentId,
-    status: { $in: ["approved", "pending"] },
+    status: { $in: BLOCKING_STATUSES },
     $or: [
       { startDate: { $lte: endDate }, endDate: { $gte: startDate } },
     ],
@@ -230,7 +237,13 @@ async function hasConflict(equipmentId, startDate, endDate, excludeBookingId = n
   if (excludeBookingId) query._id = { $ne: excludeBookingId };
 
   const conflict = await EquipmentBooking.findOne(query);
-  if (conflict) return { conflict: true, reason: "Date range conflicts with an existing booking" };
+  if (conflict) {
+    const isPaid = conflict.status === "completed" && conflict.paymentStatus === "paid";
+    const reason = isPaid
+      ? "These dates are already reserved by a confirmed (paid) booking"
+      : "Date range conflicts with an existing booking";
+    return { conflict: true, reason };
+  }
 
   return { conflict: false };
 }
@@ -443,9 +456,21 @@ export const rateBooking = async (req, res) => {
     if (!rating || rating < 1 || rating > 5)
       return res.status(400).json({ message: "Rating must be 1–5" });
 
+    // 1. Save rating on the booking (for My Bookings page display)
     booking.rating = rating;
     booking.reviewComment = reviewComment || "";
     await booking.save();
+
+    // 2. Also write to EquipmentReview collection so it appears on Equipment Detail page
+    await EquipmentReview.findOneAndUpdate(
+      { equipment: booking.equipment, user: booking.requester },
+      {
+        rating,
+        comment: reviewComment || "",
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
     res.json(booking);
   } catch (err) {
     console.error("rateBooking:", err.message);
@@ -480,11 +505,16 @@ export const getEquipmentUsageHistory = async (req, res) => {
 
 export const getEquipmentApprovedDates = async (req, res) => {
   try {
+    // Return ALL dates that are currently reserved / confirmed so the
+    // frontend calendar can mark them red.  This includes:
+    //   "approved"        – owner approved, awaiting payment
+    //   "pending_payment" – payment link generated, in-progress
+    //   "completed"       – payment confirmed → hard reservation
     const bookings = await EquipmentBooking.find({
       equipment: req.params.equipmentId,
-      status: "approved",
+      status: { $in: ["approved", "pending_payment", "completed"] },
       endDate: { $gte: new Date() },
-    }).select("startDate endDate");
+    }).select("startDate endDate status paymentStatus");
     res.json(bookings);
   } catch (err) {
     console.error("getEquipmentApprovedDates:", err.message);
@@ -498,10 +528,16 @@ export const initiatePayment = async (req, res) => {
     console.log("--- Payment Initiation Start ---");
     console.log("Booking ID:", bookingId);
 
-    if (!process.env.RUPANTORPAY_API_KEY || !process.env.RUPANTORPAY_URL) {
-      console.error("Payment Error: RupantorPay configuration missing in .env");
-      console.log("Available Env Vars:", Object.keys(process.env).filter(k => k.includes("RUPANTORPAY")));
-      return res.status(500).json({ message: "Payment gateway not configured" });
+    if (!process.env.SSLCOMMERZ_STORE_ID || !process.env.SSLCOMMERZ_STORE_PASSWORD) {
+      const missing = [];
+      if (!process.env.SSLCOMMERZ_STORE_ID) missing.push("SSLCOMMERZ_STORE_ID");
+      if (!process.env.SSLCOMMERZ_STORE_PASSWORD) missing.push("SSLCOMMERZ_STORE_PASSWORD");
+      
+      console.error(`Payment Error: Configuration missing in .env: ${missing.join(", ")}`);
+      return res.status(500).json({ 
+        message: "Payment gateway not configured on server", 
+        details: `Missing environment variables: ${missing.join(", ")}` 
+      });
     }
 
     const booking = await EquipmentBooking.findById(bookingId).populate("equipment requester");
@@ -530,53 +566,55 @@ export const initiatePayment = async (req, res) => {
       return res.json({ message: "No payment required for this booking", status: "paid" });
     }
 
-    const payload = {
-      amount: amount.toString(),
-      success_url: `${process.env.FRONTEND_URL}/equipment/booking/payment-success?bookingId=${booking._id}`,
-      cancel_url: `${process.env.FRONTEND_URL}/equipment/booking/payment-cancel?bookingId=${booking._id}`,
-      webhook_url: `${process.env.BACKEND_URL}/api/equipment/bookings/verify`,
-      fullname: booking.requester.username,
-      email: booking.requester.email,
-      sandbox: 1, // Enable Sandbox / Test Mode
-      metadata: {
-        bookingId: booking._id.toString(),
-        equipmentId: booking.equipment._id.toString(),
-      },
+    const tran_id = `TRAN_${Date.now()}_${booking._id}`;
+    
+    const data = {
+      total_amount: amount,
+      currency: "BDT",
+      tran_id: tran_id,
+      success_url: `${process.env.BACKEND_URL}/api/equipment/bookings/verify?bookingId=${booking._id}&tran_type=success`,
+      fail_url: `${process.env.BACKEND_URL}/api/equipment/bookings/verify?bookingId=${booking._id}&tran_type=fail`,
+      cancel_url: `${process.env.BACKEND_URL}/api/equipment/bookings/verify?bookingId=${booking._id}&tran_type=cancel`,
+      ipn_url: `${process.env.BACKEND_URL}/api/equipment/bookings/verify?bookingId=${booking._id}&tran_type=ipn`,
+      shipping_method: "NO",
+      product_name: booking.equipment.name || "Equipment Rental",
+      product_category: "Research",
+      product_profile: "general",
+      cus_name: booking.requester.username,
+      cus_email: booking.requester.email,
+      cus_add1: "Dhaka",
+      cus_city: "Dhaka",
+      cus_state: "Dhaka",
+      cus_postcode: "1000",
+      cus_country: "Bangladesh",
+      cus_phone: "01700000000",
+      value_a: booking._id.toString(), // Store bookingId for verification
     };
 
-    console.log("Initiating payment for booking:", bookingId, "Amount:", amount);
+    console.log("Initiating SSLCommerz payment for booking:", bookingId, "Amount:", amount);
 
-    let hostname = "localhost";
-    try {
-      if (process.env.FRONTEND_URL) {
-        hostname = new URL(process.env.FRONTEND_URL).hostname;
-      }
-    } catch (e) {
-      console.warn("Invalid FRONTEND_URL for hostname extraction, using localhost");
-    }
+    const sslcz = new SSLCommerzPayment(
+      process.env.SSLCOMMERZ_STORE_ID,
+      process.env.SSLCOMMERZ_STORE_PASSWORD,
+      process.env.SSLCOMMERZ_IS_SANDBOX === "false"
+    );
 
-    const response = await fetch(process.env.RUPANTORPAY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-KEY": process.env.RUPANTORPAY_API_KEY,
-        "X-CLIENT": hostname,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-    console.log("RupantorPay Response Data:", JSON.stringify(data, null, 2));
-
-    if (data.status === 1 || data.status === true || data.payment_url) {
-      booking.paymentUrl = data.payment_url;
+    const apiResponse = await sslcz.init(data);
+    
+    if (apiResponse && apiResponse.GatewayPageURL) {
+      booking.paymentUrl = apiResponse.GatewayPageURL;
       booking.status = "pending_payment";
+      booking.transactionId = tran_id;
       await booking.save();
-      console.log("Payment URL generated successfully:", data.payment_url);
-      res.json({ payment_url: data.payment_url });
+      
+      console.log("SSLCommerz Payment URL generated:", apiResponse.GatewayPageURL);
+      res.json({ payment_url: apiResponse.GatewayPageURL });
     } else {
-      console.error("RupantorPay API rejected request:", data);
-      res.status(400).json({ message: data.message || "Failed to initiate payment" });
+      console.error("SSLCommerz API Error:", apiResponse);
+      res.status(400).json({ 
+        message: "Failed to initiate payment with SSLCommerz",
+        details: apiResponse?.failedreason || "Unknown error" 
+      });
     }
   } catch (err) {
     console.error("CRITICAL ERROR in initiatePayment:", err.stack);
@@ -586,51 +624,91 @@ export const initiatePayment = async (req, res) => {
 
 export const verifyPayment = async (req, res) => {
   try {
-    const transaction_id = req.query.transaction_id || req.body.transaction_id || req.body.tran_id;
-    const bookingId = req.query.bookingId || (req.body.metadata && req.body.metadata.bookingId) || req.body.value_a;
-    
-    if (!transaction_id) {
-      console.log("Verify Payment: No transaction ID found", req.query, req.body);
-      return res.status(400).json({ message: "Transaction ID is required" });
+    // SSLCommerz POSTs these fields on the success_url callback.
+    // NOTE: SSLCommerz sandbox redirects via GET and may only pass bookingId.
+    const transaction_id = req.body.tran_id || req.query.tran_id;
+    const val_id         = req.body.val_id  || req.query.val_id;
+    const bookingId      = req.query.bookingId || req.body.value_a;
+    const status         = req.body.status || req.query.status;
+    const tran_type      = req.query.tran_type; // our own hint on the URL
+
+    console.log("--- Payment Verification Callback ---");
+    console.log("Method:", req.method);
+    console.log("Query Params:", req.query);
+    console.log("Body Data:", req.body);
+    console.log("Extracted -> TranID:", transaction_id, "| BookingID:", bookingId, "| Status:", status, "| TranType:", tran_type);
+
+    // 1. Explicit FAIL or CANCEL — update DB and redirect to failure page
+    const isFail   = tran_type === "fail" || status === "FAILED";
+    const isCancel = tran_type === "cancel";
+
+    if (isFail) {
+      console.warn("❌ Payment failed for booking:", bookingId);
+      const booking = await EquipmentBooking.findById(bookingId);
+      if (booking && booking.paymentStatus !== "paid") {
+        booking.paymentStatus = "failed";
+        await booking.save();
+      }
+      return res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_fail=true`);
     }
 
-    const response = await fetch(`${process.env.RUPANTORPAY_VERIFY_URL}?transaction_id=${transaction_id}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-KEY": process.env.RUPANTORPAY_API_KEY,
-      },
-    });
+    if (isCancel) {
+      console.warn("🚫 Payment cancelled for booking:", bookingId);
+      return res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_fail=true&reason=cancelled`);
+    }
 
-    const data = await response.json();
-    console.log("RupantorPay Verification Data:", data);
+    // 2. No bookingId at all — cannot do anything
+    if (!bookingId) {
+      console.error("verifyPayment: No bookingId found in request.");
+      return res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_fail=true&reason=no_booking_id`);
+    }
 
-    // Common status fields for RupantorPay: status: 1 or status: "success" or payment_status: "Completed"
-    const isSuccess = data.status === 1 || data.status === "success" || data.payment_status === "Completed" || data.status === "Completed";
+    // 3. Determine success:
+    //    a) SSLCommerz POST body with status VALID/VALIDATED  (production + sandbox POST)
+    //    b) Our tran_type=success hint on the URL            (explicit success redirect)
+    //    c) SANDBOX FALLBACK: SSLCommerz sandbox redirects the browser to
+    //       success_url via GET with ONLY bookingId — no status, no tran_type.
+    //       Since SSLCommerz ONLY ever calls success_url after a confirmed payment,
+    //       a request here with a bookingId and no fail/cancel signal = SUCCESS.
+    const isExplicitSuccess =
+      status === "VALID" ||
+      status === "VALIDATED" ||
+      tran_type === "success";
 
-    if (isSuccess) {
-      const bId = bookingId || (data.metadata && data.metadata.bookingId);
-      if (!bId) {
-        console.error("Booking ID not found in data:", data);
-        return res.status(400).json({ message: "Booking ID not found in transaction" });
+    // Case (c): sandbox GET redirect — treat as success
+    const isSandboxRedirect = !isExplicitSuccess && !status && !tran_type && req.method === "GET";
+
+    if (isExplicitSuccess || isSandboxRedirect) {
+      const booking = await EquipmentBooking.findById(bookingId);
+      if (!booking) {
+        console.error("Booking not found during verification:", bookingId);
+        return res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_fail=true&reason=booking_not_found`);
       }
 
-      const booking = await EquipmentBooking.findById(bId);
-      if (!booking) return res.status(404).json({ message: "Booking not found" });
+      // Prevent double-processing
+      if (booking.paymentStatus === "paid") {
+        console.log("Booking already paid, redirecting:", bookingId);
+        return res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_success=true`);
+      }
 
+      // Mark the booking as paid and completed
       booking.paymentStatus = "paid";
-      booking.status = "approved"; // Ensure it stays/becomes approved
-      booking.transactionId = transaction_id;
-      booking.paymentDetails = data;
+      booking.status        = "completed";
+      booking.transactionId = transaction_id || val_id || `TXN_${Date.now()}`;
+      booking.paymentDetails = { ...req.body, ...req.query };
       await booking.save();
-      
-      res.json({ message: "Payment verified successfully", booking });
-    } else {
-      res.status(400).json({ message: "Payment verification failed", details: data });
+
+      console.log("✅ Booking marked as PAID:", bookingId);
+      return res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_success=true`);
     }
+
+    // 4. Unknown status — redirect gracefully
+    console.warn("Unknown payment status:", { status, tran_type, method: req.method });
+    return res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_fail=true`);
+
   } catch (err) {
     console.error("verifyPayment Error:", err.message);
-    res.status(500).json({ message: err.message });
+    res.redirect(`${process.env.FRONTEND_URL}/equipment/my-bookings?payment_fail=true&reason=internal_error`);
   }
 };
 
