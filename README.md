@@ -1,5 +1,6 @@
 # Research-Collaboration-Network
 
+Features:
 
 1. Users can create, edit, delete, and view research projects with details such as title, abstract, research field, and status (ongoing/completed)
    
