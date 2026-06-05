@@ -9,7 +9,7 @@ import {
   Zap, MapPin, Layers, Clock, ShieldCheck, Tag, Gift, Calendar, RefreshCw, ChevronDown
 } from "lucide-react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API = `${import.meta.env.VITE_BACKEND_BASEURL}`;
 
 const CATEGORIES = [
   "Microscopy", "Spectroscopy", "Chromatography", "Computing",

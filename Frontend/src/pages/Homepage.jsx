@@ -226,10 +226,10 @@ export default function Homepage() {
       try {
         const [projectsRes, usersRes, datasetsRes, resourcesRes] =
           await Promise.allSettled([
-            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/projects`),
-            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users`),
-            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/datasets`),
-            fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/resources`),
+            fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/projects`),
+            fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/users`),
+            fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/datasets`),
+            fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/resources`),
           ]);
 
         let projectsCount = 0;

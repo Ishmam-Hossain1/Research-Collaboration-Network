@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import Navbar from "../components/Navbar";
-import profileHeroImage from "../assets/janko-ferlic-sfL_QOnmy00-unsplash.jpg";
+import profileHeroImage from "../assets/userprofile.jpg";
 
 const truncateText = (text, maxLength = 120) => {
   if (!text) return "";
@@ -62,7 +62,7 @@ export default function UserProfile() {
 
       try {
         const profileRes = await axios.get(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/${userId}`
+          `${import.meta.env.VITE_BACKEND_BASEURL}/api/users/${userId}`
         );
 
         setProfile(profileRes.data);
@@ -82,7 +82,7 @@ export default function UserProfile() {
 
         try {
           const projectsRes = await axios.get(
-            `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/projects/user/${userId}`
+            `${import.meta.env.VITE_BACKEND_BASEURL}/api/projects/user/${userId}`
           );
 
           setUserProjects(
@@ -114,7 +114,7 @@ export default function UserProfile() {
   const featuredProjects = projects;
 
   const profilePictureUrl = profile?.profilePictureId
-    ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${profile.profilePictureId}`
+    ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${profile.profilePictureId}`
     : "";
 
   const handleSaveProfile = async () => {
@@ -137,7 +137,7 @@ export default function UserProfile() {
         pictureForm.append("profilePicture", profilePictureFile);
 
         const pictureRes = await axios.put(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/${userId}/profile-picture`,
+          `${import.meta.env.VITE_BACKEND_BASEURL}/api/users/${userId}/profile-picture`,
           pictureForm,
           {
             headers: { "Content-Type": "multipart/form-data" },
@@ -160,7 +160,7 @@ export default function UserProfile() {
       };
 
       const res = await axios.put(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/${userId}`,
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/users/${userId}`,
         payload
       );
 
@@ -863,7 +863,7 @@ export default function UserProfile() {
                       collaborators.map((collaborator, index) => {
                         const collaboratorPictureUrl =
                           collaborator?.profilePictureId
-                            ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${collaborator.profilePictureId}`
+                            ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${collaborator.profilePictureId}`
                             : "";
 
                         return (

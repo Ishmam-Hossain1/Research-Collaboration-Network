@@ -70,7 +70,7 @@ export default function Researchers() {
       setLoading(true);
       setError("");
 
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users`, {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_BASEURL}/api/users`, {
         params: {
           search,
           researchInterest,
@@ -100,7 +100,7 @@ export default function Researchers() {
       setSuggestionsError("");
 
       const res = await axios.get(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/${storedUser.id}/suggested-collaborators`
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/users/${storedUser.id}/suggested-collaborators`
       );
 
       setSuggestedResearchers(res.data.matches || []);
@@ -127,7 +127,7 @@ export default function Researchers() {
 
   const renderNormalCard = (researcher) => {
     const profilePictureUrl = researcher.profilePictureId
-      ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${researcher.profilePictureId}`
+      ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${researcher.profilePictureId}`
       : "";
 
     const isCollaborator =
@@ -274,7 +274,7 @@ export default function Researchers() {
     const researcherId = researcher._id || researcher.id;
 
     const profilePictureUrl = researcher.profilePictureId
-      ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${researcher.profilePictureId}`
+      ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${researcher.profilePictureId}`
       : "";
 
     const sharedInterests = match.sharedInterests || [];

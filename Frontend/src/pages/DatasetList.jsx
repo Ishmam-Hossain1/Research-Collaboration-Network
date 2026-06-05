@@ -28,7 +28,7 @@ import SplashCursor from "../components/SplashCursor";
 import datasetBg from "../assets/dataset.webp";
 import pageBg from "../assets/datasetbackgroud..jpeg";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API = `${import.meta.env.VITE_BACKEND_BASEURL}`;
 
 const accessBadge = {
     public: {

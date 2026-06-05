@@ -1,9 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
 import LightRays from "../components/LightRays";
+
+function getArrayFromResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.projects)) return data.projects;
+  if (Array.isArray(data?.users)) return data.users;
+  if (Array.isArray(data?.researchers)) return data.researchers;
+  return [];
+}
+
+function formatCompactPlus(value) {
+  const safeValue = Number(value) || 0;
+
+  if (safeValue >= 1000) {
+    const compact = safeValue / 1000;
+    return `${Number.isInteger(compact) ? compact : compact.toFixed(1)}K+`;
+  }
+
+  return `${safeValue}+`;
+}
 
 const Login = () => {
   const navigate = useNavigate();
@@ -12,7 +32,50 @@ const Login = () => {
     identifier: "",
     password: "",
   });
+
   const [showPassword, setShowPassword] = useState(false);
+
+  const [counts, setCounts] = useState({
+    researchers: 0,
+    projects: 0,
+  });
+
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [projectsRes, usersRes] = await Promise.allSettled([
+          fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/projects`),
+          fetch(`${import.meta.env.VITE_BACKEND_BASEURL}/api/users`),
+        ]);
+
+        let projectsCount = 0;
+        let researchersCount = 0;
+
+        if (projectsRes.status === "fulfilled" && projectsRes.value.ok) {
+          const projectsData = await projectsRes.value.json();
+          projectsCount = getArrayFromResponse(projectsData).length;
+        }
+
+        if (usersRes.status === "fulfilled" && usersRes.value.ok) {
+          const usersData = await usersRes.value.json();
+          researchersCount = getArrayFromResponse(usersData).length;
+        }
+
+        setCounts({
+          researchers: researchersCount,
+          projects: projectsCount,
+        });
+      } catch (error) {
+        console.error("Error fetching login counts:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -26,7 +89,7 @@ const Login = () => {
 
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/login`,
+        `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/login`,
         formData
       );
 
@@ -103,11 +166,20 @@ const Login = () => {
 
               <div className="mt-6 grid grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-white/35 bg-white/35 p-4">
-                  <div className="text-2xl font-bold text-slate-900">2.4K+</div>
-                  <div className="mt-1 text-sm text-slate-700">Researchers</div>
+                  <div className="text-2xl font-bold text-slate-900">
+                    {statsLoading
+                      ? "..."
+                      : formatCompactPlus(counts.researchers)}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-700">
+                    Researchers
+                  </div>
                 </div>
+
                 <div className="rounded-2xl border border-white/35 bg-white/35 p-4">
-                  <div className="text-2xl font-bold text-slate-900">850+</div>
+                  <div className="text-2xl font-bold text-slate-900">
+                    {statsLoading ? "..." : formatCompactPlus(counts.projects)}
+                  </div>
                   <div className="mt-1 text-sm text-slate-700">Projects</div>
                 </div>
               </div>

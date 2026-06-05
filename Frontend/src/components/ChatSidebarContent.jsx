@@ -601,7 +601,7 @@ const ChatSidebarContent = () => {
 
   const getProfilePicture = (user) => {
     if (!user?.profilePictureId) return null;
-    return `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${user.profilePictureId}`;
+    return `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${user.profilePictureId}`;
   };
 
   const formatSidebarTimestamp = (dateString) => {

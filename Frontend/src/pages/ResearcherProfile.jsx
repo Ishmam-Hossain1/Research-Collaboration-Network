@@ -74,14 +74,14 @@ export default function ResearcherProfile() {
 
       try {
         const profileRes = await axios.get(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/users/${id}`
+          `${import.meta.env.VITE_BACKEND_BASEURL}/api/users/${id}`
         );
 
         setProfile(profileRes.data);
 
         try {
           const projectsRes = await axios.get(
-            `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/projects/user/${id}`
+            `${import.meta.env.VITE_BACKEND_BASEURL}/api/projects/user/${id}`
           );
 
           setResearcherProjects(
@@ -118,7 +118,7 @@ export default function ResearcherProfile() {
     try {
       setOpeningChat(true);
 
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/chats`, {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_BASEURL}/api/chats`, {
         senderId: storedUser.id,
         receiverId: id,
       });
@@ -170,7 +170,7 @@ export default function ResearcherProfile() {
   const featuredProjects = projects;
 
   const profilePictureUrl = profile?.profilePictureId
-    ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${profile.profilePictureId}`
+    ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${profile.profilePictureId}`
     : "";
 
   const isOwnProfile = storedUser?.id === id;
@@ -885,7 +885,7 @@ export default function ResearcherProfile() {
                       collaborators.map((collaborator, index) => {
                         const collaboratorPictureUrl =
                           collaborator?.profilePictureId
-                            ? `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile-picture/${collaborator.profilePictureId}`
+                            ? `${import.meta.env.VITE_BACKEND_BASEURL}/api/auth/profile-picture/${collaborator.profilePictureId}`
                             : "";
 
                         return (
